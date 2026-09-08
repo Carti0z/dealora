@@ -39,6 +39,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         setItems(data.items || []);
+      } else if (response.status === 401) {
+        // User not authenticated, skip loading wishlist
+        console.log('User not authenticated, skipping wishlist load');
       }
     } catch (error) {
       console.error('Failed to load wishlist:', error);
