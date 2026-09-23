@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const session = await getServerSession()
+  
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
-    const session = await getServerSession()
+    const { prisma } = await import('@/lib/prisma')
     
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
@@ -29,23 +30,21 @@ export async function GET() {
       }
     })
 
-    if (!user?.wishlist) {
-      return NextResponse.json({ items: [] })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const items = user.wishlist.items.map(item => ({
+    const wishlistItems = user.wishlist?.items.map((item: any) => ({
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
       image: item.product.images[0]?.url || '',
       slug: item.product.slug,
       brand: item.product.brand,
-      discount: item.product.compareAtPrice 
-        ? Math.round((1 - Number(item.product.compareAtPrice) / Number(item.product.price)) * 100)
-        : undefined
-    }))
+      discount: item.product.compareAtPrice ? Math.round((1 - Number(item.product.price) / Number(item.product.compareAtPrice)) * 100) : undefined
+    })) || []
 
-    return NextResponse.json({ items })
+    return NextResponse.json({ items: wishlistItems })
   } catch (error) {
     console.error('Wishlist fetch error:', error)
     return NextResponse.json({ error: 'Failed to fetch wishlist' }, { status: 500 })
@@ -53,22 +52,21 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const session = await getServerSession()
+  
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
+  try {
     const body = await request.json()
     const { productId } = body
 
-    if (!productId) {
-      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
-    }
-
+    const { prisma } = await import('@/lib/prisma')
+    
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      include: { wishlist: true }
     })
 
     if (!user) {
@@ -76,17 +74,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create wishlist
-    let wishlist = await prisma.wishlist.findUnique({
-      where: { userId: user.id }
-    })
-
+    let wishlist = user.wishlist
     if (!wishlist) {
       wishlist = await prisma.wishlist.create({
         data: { userId: user.id }
       })
     }
 
-    // Add item to wishlist
+    // Check if item already exists
     const existingItem = await prisma.wishlistItem.findUnique({
       where: {
         wishlistId_productId: {
@@ -97,17 +92,45 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingItem) {
-      return NextResponse.json({ message: 'Item already in wishlist' })
+      return NextResponse.json({ message: 'Item already in wishlist' }, { status: 400 })
     }
 
+    // Add new item
     await prisma.wishlistItem.create({
       data: {
         wishlistId: wishlist.id,
-        productId
+        productId,
+        quantity: 1
       }
     })
 
-    return NextResponse.json({ message: 'Item added to wishlist' })
+    // Fetch updated wishlist
+    const updatedWishlist = await prisma.wishlist.findUnique({
+      where: { id: wishlist.id },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                images: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    const wishlistItems = updatedWishlist?.items.map((item: any) => ({
+      id: item.product.id,
+      name: item.product.name,
+      price: Number(item.product.price),
+      image: item.product.images[0]?.url || '',
+      slug: item.product.slug,
+      brand: item.product.brand,
+      discount: item.product.compareAtPrice ? Math.round((1 - Number(item.product.price) / Number(item.product.compareAtPrice)) * 100) : undefined
+    })) || []
+
+    return NextResponse.json({ items: wishlistItems })
   } catch (error) {
     console.error('Wishlist add error:', error)
     return NextResponse.json({ error: 'Failed to add item to wishlist' }, { status: 500 })
@@ -115,39 +138,71 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession()
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const session = await getServerSession()
+  
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
+  try {
     const { searchParams } = new URL(request.url)
     const productId = searchParams.get('productId')
 
-    if (!productId) {
-      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
-    }
-
+    const { prisma } = await import('@/lib/prisma')
+    
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: { wishlist: true }
     })
 
-    if (!user?.wishlist) {
+    if (!user || !user.wishlist) {
       return NextResponse.json({ error: 'Wishlist not found' }, { status: 404 })
     }
 
-    await prisma.wishlistItem.deleteMany({
-      where: {
-        wishlistId: user.wishlist.id,
-        productId
+    if (productId) {
+      // Remove specific item
+      await prisma.wishlistItem.deleteMany({
+        where: {
+          wishlistId: user.wishlist.id,
+          productId
+        }
+      })
+    } else {
+      // Clear entire wishlist
+      await prisma.wishlistItem.deleteMany({
+        where: { wishlistId: user.wishlist.id }
+      })
+    }
+
+    // Fetch updated wishlist
+    const updatedWishlist = await prisma.wishlist.findUnique({
+      where: { id: user.wishlist.id },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                images: true
+              }
+            }
+          }
+        }
       }
     })
 
-    return NextResponse.json({ message: 'Item removed from wishlist' })
+    const wishlistItems = updatedWishlist?.items.map((item: any) => ({
+      id: item.product.id,
+      name: item.product.name,
+      price: Number(item.product.price),
+      image: item.product.images[0]?.url || '',
+      slug: item.product.slug,
+      brand: item.product.brand,
+      discount: item.product.compareAtPrice ? Math.round((1 - Number(item.product.price) / Number(item.product.compareAtPrice)) * 100) : undefined
+    })) || []
+
+    return NextResponse.json({ items: wishlistItems })
   } catch (error) {
-    console.error('Wishlist remove error:', error)
-    return NextResponse.json({ error: 'Failed to remove item from wishlist' }, { status: 500 })
+    console.error('Wishlist delete error:', error)
+    return NextResponse.json({ error: 'Failed to delete from wishlist' }, { status: 500 })
   }
 }

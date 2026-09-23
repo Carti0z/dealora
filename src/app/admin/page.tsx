@@ -1,49 +1,63 @@
-import { prisma } from '@/lib/prisma'
-import { DollarSign, ShoppingCart, Users, Package, TrendingUp, TrendingDown } from 'lucide-react'
+import { DollarSign, ShoppingCart, Users, Package, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react'
 
 async function getDashboardStats() {
-  const [
-    totalRevenue,
-    totalOrders,
-    totalCustomers,
-    totalProducts,
-    recentOrders,
-    topProducts
-  ] = await Promise.all([
-    prisma.order.aggregate({
-      where: { status: { in: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'] } },
-      _sum: { total: true }
-    }),
-    prisma.order.count(),
-    prisma.user.count({ where: { role: 'CUSTOMER' } }),
-    prisma.product.count(),
-    prisma.order.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } }
-      }
-    }),
-    prisma.product.findMany({
-      take: 5,
-      orderBy: { rating: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        rating: true,
-        reviewCount: true
-      }
-    })
-  ])
+  try {
+    const { prisma } = await import('@/lib/prisma')
+    const [
+      totalRevenue,
+      totalOrders,
+      totalCustomers,
+      totalProducts,
+      recentOrders,
+      topProducts
+    ] = await Promise.all([
+      prisma.order.aggregate({
+        where: { status: { in: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'] } },
+        _sum: { total: true }
+      }),
+      prisma.order.count(),
+      prisma.user.count({ where: { role: 'CUSTOMER' } }),
+      prisma.product.count(),
+      prisma.order.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true, email: true } }
+        }
+      }),
+      prisma.product.findMany({
+        take: 5,
+        orderBy: { rating: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          rating: true,
+          reviewCount: true
+        }
+      })
+    ])
 
-  return {
-    totalRevenue: totalRevenue._sum.total || 0,
-    totalOrders,
-    totalCustomers,
-    totalProducts,
-    recentOrders,
-    topProducts
+    return {
+      totalRevenue: totalRevenue._sum.total || 0,
+      totalOrders,
+      totalCustomers,
+      totalProducts,
+      recentOrders,
+      topProducts,
+      databaseConnected: true
+    }
+  } catch (error) {
+    // Return default stats when database is not connected
+    return {
+      totalRevenue: 0,
+      totalOrders: 0,
+      totalCustomers: 0,
+      totalProducts: 0,
+      recentOrders: [],
+      topProducts: [],
+      databaseConnected: false
+    }
   }
 }
 
@@ -87,6 +101,19 @@ export default async function AdminDashboard() {
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your store.</p>
       </div>
+
+      {!stats.databaseConnected && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-yellow-800">Database Not Connected</p>
+            <p className="text-sm text-yellow-700 mt-1">
+              Please set up your database connection by updating the DATABASE_URL in your .env file and running migrations.
+              See SETUP_DATABASE.md for instructions.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

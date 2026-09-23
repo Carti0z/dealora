@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { Gift, Clock, Users, TrendingUp } from 'lucide-react';
+import { Gift, Clock, Users, TrendingUp, CheckCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface Giveaway {
@@ -17,53 +17,33 @@ interface Giveaway {
   entryRequirement: string;
   totalEntries: number;
   endDate: Date;
+  hasEntered?: boolean;
 }
-
-const giveaways: Giveaway[] = [
-  {
-    id: '1',
-    name: 'Tech Bundle Giveaway',
-    prize: 'Brand New Laptop + Accessories',
-    prizeValue: 1499,
-    prizeImage: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&q=80',
-    winnerCount: 3,
-    entryRequirement: 'Purchase any product over $50',
-    totalEntries: 12483,
-    endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
-  },
-  {
-    id: '2',
-    name: 'Fashion Week Special',
-    prize: '$500 Shopping Spree',
-    prizeValue: 500,
-    prizeImage: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80',
-    winnerCount: 5,
-    entryRequirement: 'Sign up for newsletter',
-    totalEntries: 8234,
-    endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
-  },
-  {
-    id: '3',
-    name: 'Gaming Paradise',
-    prize: 'Next-Gen Gaming Console',
-    prizeValue: 499,
-    prizeImage: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&q=80',
-    winnerCount: 2,
-    entryRequirement: 'Join our Discord community',
-    totalEntries: 5678,
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-  },
-];
 
 export default function Giveaway() {
   const [timeLeft, setTimeLeft] = useState<{ [key: string]: { days: number; hours: number; minutes: number; seconds: number } }>({});
+  const [giveaways, setGiveaways] = useState<Giveaway[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [entering, setEntering] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/giveaways')
+      .then(res => res.json())
+      .then(data => {
+        setGiveaways(data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [])
 
   useEffect(() => {
     const calculateTimeLeft = () => {
       const newTimeLeft: { [key: string]: { days: number; hours: number; minutes: number; seconds: number } } = {};
       
       giveaways.forEach((giveaway) => {
-        const difference = giveaway.endDate.getTime() - new Date().getTime();
+        const difference = new Date(giveaway.endDate).getTime() - new Date().getTime();
         
         if (difference > 0) {
           newTimeLeft[giveaway.id] = {
@@ -82,7 +62,33 @@ export default function Giveaway() {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [giveaways]);
+
+  const handleEnter = async (giveawayId: string) => {
+    setEntering(giveawayId)
+    try {
+      const response = await fetch(`/api/giveaways/${giveawayId}/enter`, {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        setGiveaways(giveaways.map(g => 
+          g.id === giveawayId ? { ...g, hasEntered: true, totalEntries: g.totalEntries + 1 } : g
+        ))
+      } else {
+        const error = await response.json()
+        if (error.error === 'Unauthorized') {
+          alert('Please sign in to enter giveaways')
+        } else {
+          alert('Failed to enter giveaway')
+        }
+      }
+    } catch (error) {
+      alert('An error occurred')
+    } finally {
+      setEntering(null)
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -104,6 +110,20 @@ export default function Giveaway() {
       },
     },
   };
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">Loading giveaways...</div>
+        </div>
+      </section>
+    )
+  }
+
+  if (giveaways.length === 0) {
+    return null
+  }
 
   return (
     <section className="py-16 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -209,10 +229,21 @@ export default function Giveaway() {
                   </div>
 
                   {/* Enter Button */}
-                  <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 mt-auto">
-                    <Gift className="w-4 h-4 mr-2" />
-                    Enter Giveaway
-                  </Button>
+                  {giveaway.hasEntered ? (
+                    <Button disabled className="w-full bg-green-500 text-white mt-auto">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Entered
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={() => handleEnter(giveaway.id)}
+                      disabled={entering === giveaway.id}
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 mt-auto"
+                    >
+                      <Gift className="w-4 h-4 mr-2" />
+                      {entering === giveaway.id ? 'Entering...' : 'Enter Giveaway'}
+                    </Button>
+                  )}
                 </div>
               </Card>
             </motion.div>

@@ -1,23 +1,24 @@
-import { prisma } from '@/lib/prisma'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Search, Filter, Eye } from 'lucide-react'
 
-async function getOrders() {
-  const orders = await prisma.order.findMany({
-    include: {
-      user: { select: { name: true, email: true } },
-      items: {
-        include: {
-          product: { select: { name: true } }
-        }
-      }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
-  return orders
-}
+export default function AdminOrders() {
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function AdminOrders() {
-  const orders = await getOrders()
+  useEffect(() => {
+    fetch('/api/orders')
+      .then(res => res.json())
+      .then(data => {
+        setOrders(data.orders || [])
+        setLoading(false)
+      })
+      .catch(() => {
+        setOrders([])
+        setLoading(false)
+      })
+  }, [])
 
   const statusColors: Record<string, string> = {
     PENDING: 'bg-yellow-100 text-yellow-700',
@@ -27,6 +28,30 @@ export default async function AdminOrders() {
     DELIVERED: 'bg-green-100 text-green-700',
     CANCELLED: 'bg-red-100 text-red-700',
     REFUNDED: 'bg-gray-100 text-gray-700'
+  }
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (response.ok) {
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        ))
+      } else {
+        alert('Failed to update order status')
+      }
+    } catch (error) {
+      alert('An error occurred')
+    }
+  }
+
+  if (loading) {
+    return <div className="p-8">Loading...</div>
   }
 
   return (
@@ -84,7 +109,8 @@ export default async function AdminOrders() {
                   <td className="p-4">
                     <select
                       className={`px-2 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${statusColors[order.status]}`}
-                      defaultValue={order.status}
+                      value={order.status}
+                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
                     >
                       <option value="PENDING">Pending</option>
                       <option value="PAID">Paid</option>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,11 +10,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useCart } from '@/contexts/CartContext';
 import { ShoppingBag, Truck, CreditCard, Bitcoin, Gift, CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function CheckoutPage() {
+  const router = useRouter()
+  const { items, clearCart } = useCart()
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPayment, setSelectedPayment] = useState('card');
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+    postalCode: '',
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardName: ''
+  })
 
   const steps = [
     { id: 1, title: 'Cart', icon: ShoppingBag },
@@ -23,15 +43,54 @@ export default function CheckoutPage() {
     { id: 4, title: 'Confirmation', icon: CheckCircle },
   ];
 
-  const cartItems = [
-    { id: '1', name: 'Premium Wireless Headphones', price: 149.99, quantity: 1, image: '🎧' },
-    { id: '2', name: 'Smart Watch Pro', price: 299.99, quantity: 1, image: '⌚' },
-  ];
-
+  const cartItems = items
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = 9.99;
+  const shipping = subtotal > 50 ? 0 : 9.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
+
+  const handlePlaceOrder = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cartItems.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          shippingAddress: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            country: formData.country,
+            postalCode: formData.postalCode
+          },
+          paymentMethod: selectedPayment,
+          total
+        })
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        clearCart()
+        setCurrentStep(4)
+      } else {
+        alert(data.error || 'Failed to place order')
+      }
+    } catch (error) {
+      alert('An error occurred while placing the order')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const paymentMethods = [
     { id: 'card', name: 'Credit/Debit Card', icon: CreditCard, color: 'from-blue-500 to-blue-600' },
@@ -146,43 +205,81 @@ export default function CheckoutPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                          <Input placeholder="John" />
+                          <Input 
+                            value={formData.firstName}
+                            onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                            placeholder="John" 
+                          />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                          <Input placeholder="Doe" />
+                          <Input 
+                            value={formData.lastName}
+                            onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                            placeholder="Doe" 
+                          />
                         </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <Input type="email" placeholder="john@example.com" />
+                        <Input 
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          placeholder="john@example.com" 
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                        <Input type="tel" placeholder="+1 (555) 123-4567" />
+                        <Input 
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          placeholder="+1 (555) 123-4567" 
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                        <Input placeholder="123 Main Street" />
+                        <Input 
+                          value={formData.address}
+                          onChange={(e) => setFormData({...formData, address: e.target.value})}
+                          placeholder="123 Main Street" 
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                          <Input placeholder="New York" />
+                          <Input 
+                            value={formData.city}
+                            onChange={(e) => setFormData({...formData, city: e.target.value})}
+                            placeholder="New York" 
+                          />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                          <Input placeholder="NY" />
+                          <Input 
+                            value={formData.state}
+                            onChange={(e) => setFormData({...formData, state: e.target.value})}
+                            placeholder="NY" 
+                          />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-                          <Input placeholder="United States" />
+                          <Input 
+                            value={formData.country}
+                            onChange={(e) => setFormData({...formData, country: e.target.value})}
+                            placeholder="United States" 
+                          />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-                          <Input placeholder="10001" />
+                          <Input 
+                            value={formData.postalCode}
+                            onChange={(e) => setFormData({...formData, postalCode: e.target.value})}
+                            placeholder="10001" 
+                          />
                         </div>
                       </div>
                     </div>
@@ -237,21 +334,37 @@ export default function CheckoutPage() {
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                          <Input placeholder="1234 5678 9012 3456" />
+                          <Input 
+                            value={formData.cardNumber}
+                            onChange={(e) => setFormData({...formData, cardNumber: e.target.value})}
+                            placeholder="1234 5678 9012 3456" 
+                          />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                            <Input placeholder="MM/YY" />
+                            <Input 
+                              value={formData.expiryDate}
+                              onChange={(e) => setFormData({...formData, expiryDate: e.target.value})}
+                              placeholder="MM/YY" 
+                            />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
-                            <Input placeholder="123" />
+                            <Input 
+                              value={formData.cvv}
+                              onChange={(e) => setFormData({...formData, cvv: e.target.value})}
+                              placeholder="123" 
+                            />
                           </div>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Name on Card</label>
-                          <Input placeholder="John Doe" />
+                          <Input 
+                            value={formData.cardName}
+                            onChange={(e) => setFormData({...formData, cardName: e.target.value})}
+                            placeholder="John Doe" 
+                          />
                         </div>
                       </div>
                     )}
@@ -289,9 +402,10 @@ export default function CheckoutPage() {
                       </Button>
                       <Button
                         className="bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                        onClick={() => setCurrentStep(4)}
+                        onClick={handlePlaceOrder}
+                        disabled={loading}
                       >
-                        Place Order
+                        {loading ? 'Processing...' : 'Place Order'}
                         <ChevronRight className="w-4 h-4 ml-2" />
                       </Button>
                     </div>

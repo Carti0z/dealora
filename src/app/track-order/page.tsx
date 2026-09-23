@@ -1,165 +1,145 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Search, Package, Truck, CheckCircle, Clock, MapPin } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClipboardList, Search, Package, Truck, CheckCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TrackOrderPage() {
-  const [orderId, setOrderId] = useState('');
-  const [isSearched, setIsSearched] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
+  const [orderStatus, setOrderStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleTrackOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (orderId) {
-      setIsSearched(true);
-    }
+    setLoading(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Mock order status
+    setOrderStatus({
+      orderNumber: orderNumber,
+      status: 'SHIPPED',
+      estimatedDelivery: '2024-01-20',
+      trackingNumber: 'TRK123456789',
+      steps: [
+        { name: 'Order Placed', date: '2024-01-15', completed: true },
+        { name: 'Processing', date: '2024-01-16', completed: true },
+        { name: 'Shipped', date: '2024-01-17', completed: true },
+        { name: 'In Transit', date: '2024-01-18', completed: false },
+        { name: 'Delivered', date: '2024-01-20', completed: false },
+      ]
+    });
+    
+    setLoading(false);
   };
 
-  const mockOrder = isSearched ? {
-    id: orderId,
-    status: 'In Transit',
-    estimatedDelivery: 'September 10, 2026',
-    items: [
-      { name: 'iPhone 15 Pro Max', quantity: 1, price: 899.99 },
-      { name: 'AirPods Pro 2', quantity: 1, price: 199.99 },
-    ],
-    total: 1099.98,
-    trackingSteps: [
-      { status: 'Order Placed', date: 'Sep 5, 2026', completed: true, icon: Package },
-      { status: 'Processing', date: 'Sep 5, 2026', completed: true, icon: Clock },
-      { status: 'Shipped', date: 'Sep 6, 2026', completed: true, icon: Truck },
-      { status: 'In Transit', date: 'Sep 7, 2026', completed: true, icon: Truck },
-      { status: 'Out for Delivery', date: 'Sep 9, 2026', completed: false, icon: Truck },
-      { status: 'Delivered', date: 'Sep 10, 2026', completed: false, icon: CheckCircle },
-    ],
-    shippingAddress: '123 Main Street, New York, NY 10001',
-  } : null;
-
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
-      <main className="flex-1 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-8">Track Your Order</h1>
-          
-          {/* Search Form */}
-          <Card className="p-6 mb-8">
-            <form onSubmit={handleSearch} className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  type="text"
-                  placeholder="Enter your order number (e.g., ORD-12345)"
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  className="h-12"
-                />
-              </div>
-              <Button type="submit" className="h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
-                <Search className="w-5 h-5 mr-2" />
-                Track Order
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
+            ← Back to home
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">Track Your Order</h1>
+          <p className="text-gray-600 mt-2">Enter your order number to see the latest status</p>
+        </div>
+
+        {/* Search Form */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Find Your Order</CardTitle>
+            <CardDescription>Enter your order number to track your package</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleTrackOrder} className="flex gap-4">
+              <Input
+                type="text"
+                placeholder="Enter order number (e.g., #ORD12345)"
+                value={orderNumber}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={loading} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                {loading ? 'Searching...' : <><Search className="w-4 h-4 mr-2" /> Track Order</>}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Order Status */}
+        {orderStatus && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5" />
+                Order {orderStatus.orderNumber}
+              </CardTitle>
+              <CardDescription>
+                Tracking Number: {orderStatus.trackingNumber}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Status Badge */}
+              <div className="mb-6">
+                <span className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-medium">
+                  <Truck className="w-4 h-4 mr-2" />
+                  {orderStatus.status}
+                </span>
+                <p className="text-sm text-gray-600 mt-2">
+                  Estimated Delivery: {orderStatus.estimatedDelivery}
+                </p>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="space-y-4">
+                {orderStatus.steps.map((step: any, index: number) => (
+                  <div key={index} className="flex items-start gap-4">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                      step.completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
+                    }`}>
+                      {step.completed ? <CheckCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium ${step.completed ? 'text-gray-900' : 'text-gray-500'}`}>
+                        {step.name}
+                      </p>
+                      <p className="text-sm text-gray-500">{step.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
           </Card>
+        )}
 
-          {/* Order Details */}
-          {mockOrder && (
-            <div className="space-y-6">
-              {/* Status Card */}
-              <Card className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Order #{mockOrder.id}</h2>
-                    <p className="text-gray-600 mt-1">Estimated Delivery: {mockOrder.estimatedDelivery}</p>
-                  </div>
-                  <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full font-medium">
-                    {mockOrder.status}
-                  </div>
-                </div>
-
-                {/* Tracking Timeline */}
-                <div className="space-y-4">
-                  {mockOrder.trackingSteps.map((step, index) => (
-                    <div key={index} className="flex items-start space-x-4">
-                      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                        step.completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
-                      }`}>
-                        <step.icon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-center justify-between">
-                          <p className={`font-medium ${step.completed ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {step.status}
-                          </p>
-                          <p className={`text-sm ${step.completed ? 'text-gray-600' : 'text-gray-400'}`}>
-                            {step.date}
-                          </p>
-                        </div>
-                        {index < mockOrder.trackingSteps.length - 1 && (
-                          <div className={`ml-5 h-8 w-0.5 ${step.completed ? 'bg-green-500' : 'bg-gray-200'}`} />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Order Items */}
-              <Card className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Order Items</h3>
-                <div className="space-y-4">
-                  {mockOrder.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center py-3 border-b last:border-0">
-                      <div>
-                        <p className="font-medium text-gray-900">{item.name}</p>
-                        <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
-                      </div>
-                      <p className="font-semibold text-gray-900">${item.price.toFixed(2)}</p>
-                    </div>
-                  ))}
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <span className="text-lg font-bold text-gray-900">Total</span>
-                    <span className="text-lg font-bold text-gray-900">${mockOrder.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Shipping Address */}
-              <Card className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Shipping Address</h3>
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400 mt-1" />
-                  <p className="text-gray-600">{mockOrder.shippingAddress}</p>
-                </div>
-              </Card>
-
-              <Link href="/account" className="block">
+        {/* Help Section */}
+        {!orderStatus && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Need Help?</CardTitle>
+              <CardDescription>Can't find your order? Here are some options</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Link href="/account?tab=orders">
                 <Button variant="outline" className="w-full">
-                  View Order Details in Account
+                  <Package className="w-4 h-4 mr-2" />
+                  View All My Orders
                 </Button>
               </Link>
-            </div>
-          )}
-
-          {!isSearched && (
-            <Card className="p-12 text-center">
-              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Enter your order number</h3>
-              <p className="text-gray-600 mb-6">
-                You can find your order number in your confirmation email or in your account.
-              </p>
-              <Link href="/account" className="text-orange-500 hover:text-orange-600 font-medium">
-                Go to your account to view all orders
+              <Link href="/help">
+                <Button variant="outline" className="w-full">
+                  Contact Support
+                </Button>
               </Link>
-            </Card>
-          )}
-        </div>
-      </main>
-      <Footer />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

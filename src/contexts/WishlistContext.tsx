@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface WishlistItem {
   id: string;
@@ -17,7 +18,7 @@ interface WishlistContextType {
   addItem: (item: WishlistItem) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   isInWishlist: (id: string) => boolean;
-  clearWishlist: () => void;
+  clearWishlist: () => Promise<void>;
   getTotalItems: () => number;
   loading: boolean;
 }
@@ -27,21 +28,31 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
 
-  // Load wishlist from API on mount
+  // Load wishlist from localStorage on mount (for guest users)
   useEffect(() => {
     loadWishlist();
   }, []);
 
+  // Load wishlist from database when user logs in
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      loadWishlistFromDatabase();
+    }
+  }, [status, session]);
+
   const loadWishlist = async () => {
     try {
-      const response = await fetch('/api/wishlist');
-      if (response.ok) {
-        const data = await response.json();
-        setItems(data.items || []);
-      } else if (response.status === 401) {
-        // User not authenticated, skip loading wishlist
-        console.log('User not authenticated, skipping wishlist load');
+      // First try localStorage for guest users
+      const savedWishlist = localStorage.getItem('wishlist');
+      if (savedWishlist) {
+        setItems(JSON.parse(savedWishlist));
+      }
+      
+      // If user is authenticated, load from database
+      if (status === 'authenticated' && session?.user) {
+        await loadWishlistFromDatabase();
       }
     } catch (error) {
       console.error('Failed to load wishlist:', error);
@@ -50,49 +61,72 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addItem = async (item: WishlistItem) => {
+  const loadWishlistFromDatabase = async () => {
     try {
-      const response = await fetch('/api/wishlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: item.id })
-      });
-
+      const response = await fetch('/api/wishlist');
       if (response.ok) {
-        setItems((prevItems) => {
-          const existingItem = prevItems.find((i) => i.id === item.id);
-          if (existingItem) {
-            return prevItems;
-          }
-          return [...prevItems, item];
-        });
+        const data = await response.json();
+        setItems(data.items || []);
+        // Update localStorage with database data
+        localStorage.setItem('wishlist', JSON.stringify(data.items || []));
       }
     } catch (error) {
-      console.error('Failed to add item to wishlist:', error);
-      // Fallback to localStorage if API fails
-      setItems((prevItems) => {
-        const existingItem = prevItems.find((i) => i.id === item.id);
-        if (existingItem) {
-          return prevItems;
+      console.error('Failed to load wishlist from database:', error);
+    }
+  };
+
+  const addItem = async (item: WishlistItem) => {
+    // Update local state immediately for responsiveness
+    setItems((prevItems) => {
+      const existingItem = prevItems.find((i) => i.id === item.id);
+      if (existingItem) {
+        return prevItems;
+      }
+      return [...prevItems, item];
+    });
+
+    // Sync with database if user is logged in
+    if (status === 'authenticated' && session?.user) {
+      try {
+        const response = await fetch('/api/wishlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: item.id })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setItems(data.items || []);
+          localStorage.setItem('wishlist', JSON.stringify(data.items || []));
         }
-        return [...prevItems, item];
-      });
+      } catch (error) {
+        console.error('Failed to sync wishlist with database:', error);
+      }
+    } else {
+      // Save to localStorage for guest users
+      localStorage.setItem('wishlist', JSON.stringify(items));
     }
   };
 
   const removeItem = async (id: string) => {
-    try {
-      const response = await fetch(`/api/wishlist?productId=${id}`, {
-        method: 'DELETE'
-      });
+    setItems((prevItems) => prevItems.filter((item) => item.id !== id));
 
-      if (response.ok) {
-        setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+    if (status === 'authenticated' && session?.user) {
+      try {
+        const response = await fetch(`/api/wishlist?productId=${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setItems(data.items || []);
+          localStorage.setItem('wishlist', JSON.stringify(data.items || []));
+        }
+      } catch (error) {
+        console.error('Failed to remove item from database:', error);
       }
-    } catch (error) {
-      console.error('Failed to remove item from wishlist:', error);
-      // Fallback to localStorage if API fails
-      setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+    } else {
+      localStorage.setItem('wishlist', JSON.stringify(items));
     }
   };
 
@@ -100,8 +134,24 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     return items.some((item) => item.id === id);
   };
 
-  const clearWishlist = () => {
+  const clearWishlist = async () => {
     setItems([]);
+
+    if (status === 'authenticated' && session?.user) {
+      try {
+        const response = await fetch('/api/wishlist', {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          localStorage.setItem('wishlist', JSON.stringify([]));
+        }
+      } catch (error) {
+        console.error('Failed to clear wishlist in database:', error);
+      }
+    } else {
+      localStorage.setItem('wishlist', JSON.stringify([]));
+    }
   };
 
   const getTotalItems = () => {

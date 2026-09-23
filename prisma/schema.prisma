@@ -341,6 +341,7 @@ model WishlistItem {
   id          String   @id @default(cuid())
   wishlistId  String
   productId   String
+  quantity    Int      @default(1)
   createdAt   DateTime @default(now())
 
   wishlist    Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
@@ -544,4 +545,16 @@ model UserPaymentMethod {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model NewsletterSubscriber {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  subscribedAt  DateTime  @default(now())
+  isActive      Boolean   @default(true)
+  unsubscribedAt DateTime?
+  metadata      Json?
+
+  @@index([email])
+  @@index([isActive])
 }

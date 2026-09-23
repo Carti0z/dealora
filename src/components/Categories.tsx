@@ -2,8 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { Card } from './ui/card';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
 interface Category {
   name: string;
@@ -11,44 +12,84 @@ interface Category {
   productCount: number;
   color: string;
   slug: string;
+  description?: string;
 }
 
-const categories: Category[] = [
-  { name: 'Electronics', image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&q=80', productCount: 2340, color: 'from-blue-500 to-blue-600', slug: 'electronics' },
-  { name: 'Phones & Tablets', image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&q=80', productCount: 1890, color: 'from-purple-500 to-purple-600', slug: 'phones-tablets' },
-  { name: 'Computers', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400&q=80', productCount: 1560, color: 'from-indigo-500 to-indigo-600', slug: 'computers' },
-  { name: 'Fashion', image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&q=80', productCount: 3240, color: 'from-pink-500 to-pink-600', slug: 'fashion' },
-  { name: 'Shoes', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80', productCount: 2180, color: 'from-orange-500 to-orange-600', slug: 'shoes' },
-  { name: 'Beauty', image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&q=80', productCount: 1450, color: 'from-rose-500 to-rose-600', slug: 'beauty' },
-  { name: 'Home & Kitchen', image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80', productCount: 2890, color: 'from-green-500 to-green-600', slug: 'home-kitchen' },
-  { name: 'Furniture', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80', productCount: 980, color: 'from-teal-500 to-teal-600', slug: 'furniture' },
-  { name: 'Gaming', image: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=400&q=80', productCount: 1670, color: 'from-red-500 to-red-600', slug: 'gaming' },
-  { name: 'Sports', image: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&q=80', productCount: 1340, color: 'from-yellow-500 to-yellow-600', slug: 'sports' },
-  { name: 'Accessories', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80', productCount: 2560, color: 'from-cyan-500 to-cyan-600', slug: 'accessories' },
-  { name: 'Groceries', image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80', productCount: 4120, color: 'from-emerald-500 to-emerald-600', slug: 'groceries' },
+const cardColors = [
+  'bg-blue-50',
+  'bg-pink-50', 
+  'bg-green-50',
+  'bg-purple-50',
+  'bg-orange-50',
+  'bg-rose-50',
 ];
 
 export default function Categories() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const itemsPerSlide = 4;
+  const totalSlides = categories.length > 0 ? Math.ceil(categories.length / itemsPerSlide) : 0;
+
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        setCategories(data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % totalSlides);
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05,
+        staggerChildren: 0.1,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
+    hidden: { opacity: 0, x: 50 },
     visible: {
       opacity: 1,
-      scale: 1,
+      x: 0,
       transition: {
-        duration: 0.3,
+        duration: 0.5,
       },
     },
   };
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">Loading categories...</div>
+        </div>
+      </section>
+    )
+  }
+
+  if (categories.length === 0) {
+    return null
+  }
+
+  const currentCategories = categories.slice(
+    currentIndex * itemsPerSlide,
+    (currentIndex + 1) * itemsPerSlide
+  );
 
   return (
     <section className="py-16 bg-gray-50">
@@ -61,26 +102,57 @@ export default function Categories() {
           </p>
         </div>
 
-        {/* Categories Grid */}
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={prevSlide}
+            disabled={totalSlides <= 1}
+            className="p-3 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </button>
+          
+          <div className="flex gap-2">
+            {Array.from({ length: totalSlides }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-orange-500' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={nextSlide}
+            disabled={totalSlides <= 1}
+            className="p-3 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-6 h-6 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Sliding Cards */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {categories.map((category, index) => (
+          {currentCategories.map((category, index) => (
             <motion.div
               key={category.name}
               variants={itemVariants}
-              whileHover={{ scale: 1.05, y: -5 }}
+              whileHover={{ scale: 1.02, y: -5 }}
               transition={{ type: 'spring', stiffness: 300 }}
             >
               <Link href={`/categories/${category.slug}`}>
-                <Card className="overflow-hidden cursor-pointer group h-full">
-                  <div className="relative">
-                    {/* Category Image Background */}
-                    <div className={`aspect-square bg-gradient-to-br ${category.color} flex items-center justify-center overflow-hidden`}>
+                <Card className={`overflow-hidden cursor-pointer group h-full ${cardColors[index % cardColors.length]} border-0 shadow-md hover:shadow-xl transition-shadow duration-300`}>
+                  <div className="relative p-6">
+                    {/* Category Image */}
+                    <div className="w-full h-40 mb-4 rounded-lg overflow-hidden bg-white">
                       <img 
                         src={category.image} 
                         alt={category.name}
@@ -88,20 +160,19 @@ export default function Categories() {
                       />
                     </div>
 
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
-                  </div>
-
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 group-hover:text-orange-500 transition-colors">
+                    {/* Category Info */}
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
                       {category.name}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {category.productCount.toLocaleString()} Products
+                    <p className="text-sm text-gray-600 mb-4">
+                      {category.description || `${category.productCount.toLocaleString()} products available`}
                     </p>
-                    <div className="flex items-center text-orange-500 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-sm font-medium">Browse</span>
-                      <ArrowRight className="w-4 h-4 ml-1" />
+
+                    {/* Arrow Icon */}
+                    <div className="flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center group-hover:bg-orange-600 transition-colors">
+                        <ArrowRight className="w-5 h-5 text-white" />
+                      </div>
                     </div>
                   </div>
                 </Card>

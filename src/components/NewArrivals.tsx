@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -20,205 +20,54 @@ interface NewArrivalProduct {
   isNew: boolean;
 }
 
-const categories = ['All', 'Electronics', 'Fashion', 'Home', 'Gaming'];
-
-const productsByCategory: Record<string, NewArrivalProduct[]> = {
-  All: [
-    {
-      id: '1',
-      name: 'Smart Display Hub',
-      brand: 'TechHome',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-      price: 199.99,
-      category: 'Electronics',
-      isNew: true,
-    },
-    {
-      id: '2',
-      name: 'Designer Jacket',
-      brand: 'StyleCo',
-      image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
-      price: 149.99,
-      category: 'Fashion',
-      isNew: true,
-    },
-    {
-      id: '3',
-      name: 'Smart Coffee Maker',
-      brand: 'BrewTech',
-      image: 'https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=400&q=80',
-      price: 129.99,
-      category: 'Home',
-      isNew: true,
-    },
-    {
-      id: '4',
-      name: 'VR Headset Pro',
-      brand: 'GameVision',
-      image: 'https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?w=400&q=80',
-      price: 399.99,
-      category: 'Gaming',
-      isNew: true,
-    },
-  ],
-  Electronics: [
-    {
-      id: '1',
-      name: 'Smart Display Hub',
-      brand: 'TechHome',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-      price: 199.99,
-      category: 'Electronics',
-      isNew: true,
-    },
-    {
-      id: '5',
-      name: 'Wireless Charging Pad',
-      brand: 'ChargePro',
-      image: 'https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?w=400&q=80',
-      price: 49.99,
-      category: 'Electronics',
-      isNew: true,
-    },
-    {
-      id: '6',
-      name: 'Smart Doorbell',
-      brand: 'SecureHome',
-      image: 'https://images.unsplash.com/photo-1558002038-1091777c8d5e?w=400&q=80',
-      price: 179.99,
-      category: 'Electronics',
-      isNew: true,
-    },
-    {
-      id: '7',
-      name: 'Portable Projector',
-      brand: 'ViewMax',
-      image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&q=80',
-      price: 299.99,
-      category: 'Electronics',
-      isNew: true,
-    },
-  ],
-  Fashion: [
-    {
-      id: '2',
-      name: 'Designer Jacket',
-      brand: 'StyleCo',
-      image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
-      price: 149.99,
-      category: 'Fashion',
-      isNew: true,
-    },
-    {
-      id: '8',
-      name: 'Luxury Watch',
-      brand: 'TimePiece',
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80',
-      price: 249.99,
-      category: 'Fashion',
-      isNew: true,
-    },
-    {
-      id: '9',
-      name: 'Designer Sunglasses',
-      brand: 'SunStyle',
-      image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80',
-      price: 89.99,
-      category: 'Fashion',
-      isNew: true,
-    },
-    {
-      id: '10',
-      name: 'Leather Handbag',
-      brand: 'LuxBag',
-      image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',
-      price: 199.99,
-      category: 'Fashion',
-      isNew: true,
-    },
-  ],
-  Home: [
-    {
-      id: '3',
-      name: 'Smart Coffee Maker',
-      brand: 'BrewTech',
-      image: 'https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=400&q=80',
-      price: 129.99,
-      category: 'Home',
-      isNew: true,
-    },
-    {
-      id: '11',
-      name: 'Air Purifier',
-      brand: 'PureAir',
-      image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80',
-      price: 159.99,
-      category: 'Home',
-      isNew: true,
-    },
-    {
-      id: '12',
-      name: 'Smart Vacuum',
-      brand: 'CleanBot',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-      price: 349.99,
-      category: 'Home',
-      isNew: true,
-    },
-    {
-      id: '13',
-      name: 'Smart Light Bulbs',
-      brand: 'LumiTech',
-      image: 'https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&q=80',
-      price: 79.99,
-      category: 'Home',
-      isNew: true,
-    },
-  ],
-  Gaming: [
-    {
-      id: '4',
-      name: 'VR Headset Pro',
-      brand: 'GameVision',
-      image: 'https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?w=400&q=80',
-      price: 399.99,
-      category: 'Gaming',
-      isNew: true,
-    },
-    {
-      id: '14',
-      name: 'Gaming Keyboard',
-      brand: 'KeyMaster',
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b91add1?w=400&q=80',
-      price: 129.99,
-      category: 'Gaming',
-      isNew: true,
-    },
-    {
-      id: '15',
-      name: 'Gaming Mouse',
-      brand: 'ClickPro',
-      image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&q=80',
-      price: 79.99,
-      category: 'Gaming',
-      isNew: true,
-    },
-    {
-      id: '16',
-      name: 'Gaming Headset',
-      brand: 'SoundMax',
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
-      price: 99.99,
-      category: 'Gaming',
-      isNew: true,
-    },
-  ],
-};
-
 export default function NewArrivals() {
   const { addItem } = useCart();
   const { addItem: addToWishlist, isInWishlist } = useWishlist();
   const [activeTab, setActiveTab] = useState('All');
+  const [products, setProducts] = useState<NewArrivalProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products/new-arrivals')
+      .then(res => res.json())
+      .then(data => {
+        setProducts(data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  const categories = ['All', 'Electronics', 'Fashion', 'Home', 'Gaming'];
+
+  const productsByCategory: Record<string, NewArrivalProduct[]> = {
+    All: products,
+    Electronics: products.filter(p => p.category === 'Electronics'),
+    Fashion: products.filter(p => p.category === 'Fashion'),
+    Home: products.filter(p => p.category === 'Home'),
+    Gaming: products.filter(p => p.category === 'Gaming'),
+  };
+
+  const handleAddToCart = async (product: NewArrivalProduct) => {
+    await addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.name.toLowerCase().replace(/\s+/g, '-'),
+    });
+  };
+
+  const handleAddToWishlist = async (product: NewArrivalProduct) => {
+    await addToWishlist({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      slug: product.name.toLowerCase().replace(/\s+/g, '-'),
+    });
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -240,6 +89,20 @@ export default function NewArrivals() {
       },
     },
   };
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">Loading new arrivals...</div>
+        </div>
+      </section>
+    )
+  }
+
+  if (products.length === 0) {
+    return null
+  }
 
   return (
     <section className="py-16 bg-white">
@@ -271,7 +134,7 @@ export default function NewArrivals() {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
               >
                 {productsByCategory[category]?.map((product, index) => (
                   <motion.div
@@ -302,9 +165,10 @@ export default function NewArrivals() {
                           <Button
                             size="icon"
                             variant="secondary"
-                            className="h-8 w-8 rounded-full bg-white shadow-md"
+                            className={`h-8 w-8 rounded-full bg-white shadow-md ${isInWishlist(product.id) ? 'text-red-500' : ''}`}
+                            onClick={() => handleAddToWishlist(product)}
                           >
-                            <Heart className="h-4 w-4" />
+                            <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                           </Button>
                           <Button
                             size="icon"
@@ -335,7 +199,10 @@ export default function NewArrivals() {
                         </div>
 
                         {/* Add to Cart Button */}
-                        <Button className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600">
+                        <Button 
+                          className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600"
+                          onClick={() => handleAddToCart(product)}
+                        >
                           <ShoppingCart className="w-4 h-4 mr-2" />
                           Add to Cart
                         </Button>

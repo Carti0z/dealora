@@ -20,89 +20,6 @@ interface FlashSaleProduct {
   viewers: number;
 }
 
-const flashSaleProducts: FlashSaleProduct[] = [
-  {
-    id: '1',
-    name: 'Wireless Headphones',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
-    originalPrice: 120,
-    price: 69.99,
-    discount: 42,
-    stock: 8,
-    viewers: 12,
-  },
-  {
-    id: '2',
-    name: 'Smart Watch Pro',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80',
-    originalPrice: 299,
-    price: 149.99,
-    discount: 50,
-    stock: 5,
-    viewers: 8,
-  },
-  {
-    id: '3',
-    name: 'Bluetooth Speaker',
-    image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400&q=80',
-    originalPrice: 89,
-    price: 39.99,
-    discount: 55,
-    stock: 15,
-    viewers: 6,
-  },
-  {
-    id: '4',
-    name: 'Wireless Earbuds',
-    image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&q=80',
-    originalPrice: 79,
-    price: 29.99,
-    discount: 62,
-    stock: 3,
-    viewers: 15,
-  },
-  {
-    id: '5',
-    name: 'Gaming Mouse',
-    image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&q=80',
-    originalPrice: 59,
-    price: 29.99,
-    discount: 49,
-    stock: 12,
-    viewers: 9,
-  },
-  {
-    id: '6',
-    name: 'Mechanical Keyboard',
-    image: 'https://images.unsplash.com/photo-1587829741301-dc798b91add1?w=400&q=80',
-    originalPrice: 149,
-    price: 79.99,
-    discount: 46,
-    stock: 7,
-    viewers: 11,
-  },
-  {
-    id: '7',
-    name: 'USB-C Hub',
-    image: 'https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&q=80',
-    originalPrice: 69,
-    price: 34.99,
-    discount: 49,
-    stock: 20,
-    viewers: 5,
-  },
-  {
-    id: '8',
-    name: 'Wireless Charger',
-    image: 'https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?w=400&q=80',
-    originalPrice: 49,
-    price: 24.99,
-    discount: 49,
-    stock: 18,
-    viewers: 7,
-  },
-];
-
 export default function FlashSale() {
   const { addItem } = useCart();
   const { addItem: addToWishlist, isInWishlist } = useWishlist();
@@ -112,8 +29,22 @@ export default function FlashSale() {
     seconds: 18,
   });
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [flashSaleProducts, setFlashSaleProducts] = useState<FlashSaleProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const itemsPerSlide = 4;
   const totalSlides = flashSaleProducts.length > 0 ? Math.ceil(flashSaleProducts.length / itemsPerSlide) : 0;
+
+  useEffect(() => {
+    fetch('/api/flash-sales')
+      .then(res => res.json())
+      .then(data => {
+        setFlashSaleProducts(data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [])
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % totalSlides);
@@ -140,6 +71,20 @@ export default function FlashSale() {
 
     return () => clearInterval(timer);
   }, []);
+
+  if (loading) {
+    return (
+      <section className="py-8 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">Loading flash sales...</div>
+        </div>
+      </section>
+    )
+  }
+
+  if (flashSaleProducts.length === 0) {
+    return null
+  }
 
   return (
     <section className="py-8 bg-white">

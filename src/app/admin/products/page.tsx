@@ -1,21 +1,43 @@
-import { prisma } from '@/lib/prisma'
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react'
 
-async function getProducts() {
-  const products = await prisma.product.findMany({
-    include: {
-      category: { select: { name: true } },
-      inventory: { select: { quantity: true } },
-      images: { take: 1, select: { url: true } }
-    },
-    orderBy: { createdAt: 'desc' }
-  })
-  return products
-}
+export default function AdminProducts() {
+  const [products, setProducts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function AdminProducts() {
-  const products = await getProducts()
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        setProducts(data)
+        setLoading(false)
+      })
+  }, [])
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+
+    try {
+      const response = await fetch(`/api/admin/products/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setProducts(products.filter(p => p.id !== id))
+      } else {
+        alert('Failed to delete product')
+      }
+    } catch (error) {
+      alert('An error occurred')
+    }
+  }
+
+  if (loading) {
+    return <div className="p-8">Loading...</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -119,7 +141,10 @@ export default async function AdminProducts() {
                       >
                         <Edit className="w-5 h-5 text-gray-600" />
                       </Link>
-                      <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
+                      <button
+                        onClick={() => handleDelete(product.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                      >
                         <Trash2 className="w-5 h-5 text-red-600" />
                       </button>
                     </div>

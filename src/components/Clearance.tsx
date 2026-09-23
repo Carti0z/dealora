@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { ShoppingCart, Heart, Eye } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { useState, useEffect } from 'react';
 
 interface ClearanceProduct {
   id: string;
@@ -19,89 +20,6 @@ interface ClearanceProduct {
   stock: number;
 }
 
-const clearanceProducts: ClearanceProduct[] = [
-  {
-    id: '1',
-    name: 'iPhone 15 Pro Max',
-    image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&q=80',
-    originalPrice: 1199,
-    clearancePrice: 899.99,
-    discount: 25,
-    rating: 4.8,
-    stock: 4,
-  },
-  {
-    id: '2',
-    name: 'Samsung Galaxy S24 Ultra',
-    image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&q=80',
-    originalPrice: 1299,
-    clearancePrice: 949.99,
-    discount: 27,
-    rating: 4.7,
-    stock: 3,
-  },
-  {
-    id: '3',
-    name: 'Nike Air Jordan 1',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80',
-    originalPrice: 180,
-    clearancePrice: 119.99,
-    discount: 33,
-    rating: 4.9,
-    stock: 5,
-  },
-  {
-    id: '4',
-    name: 'Apple Watch Ultra 2',
-    image: 'https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=400&q=80',
-    originalPrice: 799,
-    clearancePrice: 599.99,
-    discount: 25,
-    rating: 4.6,
-    stock: 6,
-  },
-  {
-    id: '5',
-    name: 'Designer Leather Handbag',
-    image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',
-    originalPrice: 349,
-    clearancePrice: 174.99,
-    discount: 50,
-    rating: 4.5,
-    stock: 2,
-  },
-  {
-    id: '6',
-    name: 'Sony WH-1000XM5 Headphones',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
-    originalPrice: 399,
-    clearancePrice: 279.99,
-    discount: 30,
-    rating: 4.7,
-    stock: 8,
-  },
-  {
-    id: '7',
-    name: 'MacBook Air M3',
-    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&q=80',
-    originalPrice: 1299,
-    clearancePrice: 999.99,
-    discount: 23,
-    rating: 4.8,
-    stock: 3,
-  },
-  {
-    id: '8',
-    name: 'Samsung 65" 4K Smart TV',
-    image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&q=80',
-    originalPrice: 899,
-    clearancePrice: 599.99,
-    discount: 33,
-    rating: 4.4,
-    stock: 4,
-  },
-];
-
 const getDiscountColor = (discount: number) => {
   if (discount >= 70) return 'bg-red-500';
   if (discount >= 50) return 'bg-orange-500';
@@ -111,6 +29,20 @@ const getDiscountColor = (discount: number) => {
 export default function Clearance() {
   const { addItem } = useCart();
   const { addItem: addToWishlist, isInWishlist } = useWishlist();
+  const [clearanceProducts, setClearanceProducts] = useState<ClearanceProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products/clearance')
+      .then(res => res.json())
+      .then(data => {
+        setClearanceProducts(data)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
+  }, [])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -132,6 +64,20 @@ export default function Clearance() {
       },
     },
   };
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">Loading clearance items...</div>
+        </div>
+      </section>
+    )
+  }
+
+  if (clearanceProducts.length === 0) {
+    return null
+  }
 
   return (
     <section className="py-16 bg-white">

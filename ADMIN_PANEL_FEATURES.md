@@ -161,8 +161,6 @@ To effectively manage this e-commerce operation, a robust admin panel is essenti
   - Ban/unban accounts
   - Reset passwords
   - Send promotional emails
-  - Add customer notes
-  - View customer analytics
 
 ---
 

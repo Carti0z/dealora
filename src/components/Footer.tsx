@@ -1,7 +1,7 @@
 'use client';
 
 import { Separator } from './ui/separator';
-import { Share2, Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -27,6 +27,9 @@ export default function Footer() {
         { name: 'Track Order', href: '/track-order' },
       ],
     },
+  ];
+
+  const accountCompanySections = [
     {
       title: 'Account',
       links: [
@@ -47,23 +50,6 @@ export default function Footer() {
         { name: 'Cookie Policy', href: '/cookies' },
       ],
     },
-  ];
-
-  const paymentMethods = [
-    { name: 'Visa', icon: '💳' },
-    { name: 'Mastercard', icon: '💳' },
-    { name: 'American Express', icon: '💳' },
-    { name: 'PayPal', icon: '💳' },
-    { name: 'Bitcoin', icon: '₿' },
-    { name: 'Ethereum', icon: 'Ξ' },
-  ];
-
-  const socialLinks = [
-    { name: 'Facebook', icon: Share2, href: '#', color: 'hover:bg-blue-600' },
-    { name: 'Twitter', icon: Share2, href: '#', color: 'hover:bg-sky-500' },
-    { name: 'Instagram', icon: Share2, href: '#', color: 'hover:bg-pink-600' },
-    { name: 'YouTube', icon: Share2, href: '#', color: 'hover:bg-red-600' },
-    { name: 'LinkedIn', icon: Share2, href: '#', color: 'hover:bg-blue-700' },
   ];
 
   return (
@@ -96,7 +82,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Footer Links */}
+          {/* Shop & Help */}
           {footerSections.map((section) => (
             <div key={section.title} className="space-y-4">
               <h4 className="font-semibold text-lg">{section.title}</h4>
@@ -114,45 +100,30 @@ export default function Footer() {
               </ul>
             </div>
           ))}
+
+          {/* Account & Company - Side by Side */}
+          <div className="grid grid-cols-2 gap-6">
+            {accountCompanySections.map((section) => (
+              <div key={section.title} className="space-y-4">
+                <h4 className="font-semibold text-lg">{section.title}</h4>
+                <ul className="space-y-2">
+                  {section.links.map((link) => (
+                    <li key={link.name}>
+                      <a
+                        href={link.href}
+                        className="text-gray-400 hover:text-orange-500 transition-colors text-sm"
+                      >
+                        {link.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
         <Separator className="bg-gray-800 mb-8" />
-
-        {/* Payment Methods & Social Links */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-6 md:space-y-0">
-          {/* Payment Methods */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-gray-300">Payment Methods</h4>
-            <div className="flex flex-wrap gap-3">
-              {paymentMethods.map((method) => (
-                <div
-                  key={method.name}
-                  className="bg-gray-800 rounded-lg px-3 py-2 text-center hover:bg-gray-700 transition-colors cursor-pointer"
-                  title={method.name}
-                >
-                  <span className="text-xl">{method.icon}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Social Links */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-gray-300">Follow Us</h4>
-            <div className="flex space-x-3">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.name}
-                  href={social.href}
-                  className={`p-2 bg-gray-800 rounded-lg hover:text-white transition-colors ${social.color}`}
-                  aria-label={social.name}
-                >
-                  <social.icon className="w-5 h-5" />
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Bottom Footer */}
@@ -168,9 +139,6 @@ export default function Footer() {
               </a>
               <a href="/terms" className="hover:text-orange-500 transition-colors">
                 Terms of Service
-              </a>
-              <a href="/cookies" className="hover:text-orange-500 transition-colors">
-                Cookie Policy
               </a>
             </div>
           </div>

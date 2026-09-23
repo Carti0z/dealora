@@ -2,18 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingCart, User, Heart, Menu, X, Gift } from 'lucide-react';
+import { Search, ShoppingCart, User, Heart, Menu, X, Gift, ChevronDown, Package, CreditCard, HelpCircle, ClipboardList } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { useSession, signOut } from 'next-auth/react';
+import Link from 'next/link';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { getTotalItems } = useCart();
   const { getTotalItems: getWishlistItems } = useWishlist();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +26,20 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isUserMenuOpen) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.user-menu-container')) {
+          setIsUserMenuOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isUserMenuOpen]);
 
   const navItems = [
     { name: 'Home', href: '/' },
@@ -40,6 +58,19 @@ export default function Navbar() {
       window.location.href = `/search?q=${encodeURIComponent(searchInput)}`;
     }
   };
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' });
+    setIsUserMenuOpen(false);
+  };
+
+  const userMenuItems = [
+    { name: 'My Account', href: '/account', icon: User },
+    { name: 'My Orders', href: '/account?tab=orders', icon: Package },
+    { name: 'Payment Options', href: '/account?tab=payment', icon: CreditCard },
+    { name: 'Track Order', href: '/track-order', icon: ClipboardList },
+    { name: 'Help Center', href: '/help', icon: HelpCircle },
+  ];
 
   return (
     <>
@@ -139,11 +170,74 @@ export default function Navbar() {
               </a>
 
               {/* Account */}
-              <a href="/login">
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-              </a>
+              <div className="relative user-menu-container">
+                {status === 'authenticated' && session?.user ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                      className="relative"
+                    >
+                      <User className="h-5 w-5" />
+                    </Button>
+                    
+                    {/* User Dropdown Menu */}
+                    <AnimatePresence>
+                      {isUserMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50"
+                        >
+                          {/* User Info */}
+                          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-red-50">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {session.user.name || 'User'}
+                            </p>
+                            <p className="text-xs text-gray-600 truncate">
+                              {session.user.email}
+                            </p>
+                          </div>
+                          
+                          {/* Menu Items */}
+                          <div className="py-2">
+                            {userMenuItems.map((item) => (
+                              <Link
+                                key={item.name}
+                                href={item.href}
+                                onClick={() => setIsUserMenuOpen(false)}
+                                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                              >
+                                <item.icon className="w-4 h-4 mr-3" />
+                                {item.name}
+                              </Link>
+                            ))}
+                          </div>
+                          
+                          {/* Sign Out */}
+                          <div className="border-t border-gray-200 py-2">
+                            <button
+                              onClick={handleSignOut}
+                              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            >
+                              <User className="w-4 h-4 mr-3" />
+                              Sign Out
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                ) : (
+                  <a href="/login">
+                    <Button variant="ghost" size="icon">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </a>
+                )}
+              </div>
 
               {/* Mobile Menu Button */}
               <Button

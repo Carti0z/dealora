@@ -6,18 +6,39 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function ForgotPasswordPage() {
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Password reset requested for:', email);
-    // TODO: Implement password reset email logic
-    setIsSubmitted(true);
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+      } else {
+        setError(data.error || 'Failed to send reset email');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,18 +54,42 @@ export default function ForgotPasswordPage() {
             <div className="mx-auto w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center">
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-3xl font-bold text-gray-900">
-              {isSubmitted ? 'Check Your Email' : 'Forgot Password?'}
-            </CardTitle>
+            <CardTitle className="text-3xl font-bold text-gray-900">Forgot Password?</CardTitle>
             <CardDescription className="text-gray-600">
-              {isSubmitted
-                ? 'We sent a password reset link to your email'
-                : 'Enter your email to receive a password reset link'}
+              Enter your email address and we'll send you a link to reset your password
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!isSubmitted ? (
+            {success ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-8"
+              >
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Check your email</h3>
+                <p className="text-gray-600 mb-6">
+                  We've sent a password reset link to <strong>{email}</strong>
+                </p>
+                <Button
+                  onClick={() => setSuccess(false)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Send another email
+                </Button>
+              </motion.div>
+            ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-gray-700 font-medium">
                     Email Address
@@ -65,36 +110,21 @@ export default function ForgotPasswordPage() {
 
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold text-lg"
                 >
-                  Send Reset Link
+                  {loading ? 'Sending...' : 'Send Reset Link'}
                 </Button>
               </form>
-            ) : (
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <CheckCircle className="w-16 h-16 text-green-500" />
-                </div>
-                <p className="text-gray-600">
-                  We've sent a password reset link to <span className="font-semibold">{email}</span>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Please check your inbox and follow the instructions to reset your password.
-                </p>
-                <Button
-                  onClick={() => setIsSubmitted(false)}
-                  variant="outline"
-                  className="w-full h-12 border-gray-300"
-                >
-                  Try Another Email
-                </Button>
-              </div>
             )}
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 pt-8">
-            <Link href="/login" className="flex items-center justify-center text-gray-600 hover:text-gray-900 text-sm font-medium">
+            <Link 
+              href="/login" 
+              className="flex items-center justify-center text-gray-500 hover:text-gray-700 text-sm"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Login
+              Back to login
             </Link>
             <Link href="/" className="text-center text-gray-500 hover:text-gray-700 text-sm">
               ← Back to home
