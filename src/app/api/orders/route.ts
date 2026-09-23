@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { sendOrderConfirmationEmail } from '@/lib/email'
 
 export async function GET() {
   try {
@@ -206,6 +207,37 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Send order confirmation email
+    try {
+      await sendOrderConfirmationEmail({
+        orderNumber: order.orderNumber,
+        customerName: user.name || `${shippingAddress.firstName} ${shippingAddress.lastName}`,
+        customerEmail: shippingAddress.email || user.email,
+        items: order.items.map(item => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: Number(item.price),
+          total: Number(item.total)
+        })),
+        subtotal: Number(order.subtotal),
+        shipping: Number(order.shipping),
+        tax: Number(order.tax),
+        total: Number(order.total),
+        shippingAddress: {
+          fullName: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
+          address: shippingAddress.address,
+          city: shippingAddress.city,
+          state: shippingAddress.state,
+          country: shippingAddress.country,
+          postalCode: shippingAddress.postalCode
+        },
+        estimatedDelivery: order.estimatedDelivery
+      })
+    } catch (emailError) {
+      console.error('Failed to send order confirmation email:', emailError)
+      // Don't fail the order if email fails
+    }
 
     return NextResponse.json({ order: { id: order.id, orderNumber: order.orderNumber } })
   } catch (error) {
