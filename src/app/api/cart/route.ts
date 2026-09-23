@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
-        wishlist: {
+        cart: {
           include: {
             items: {
               include: {
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Transform wishlist items to cart format
-    const cartItems = user.wishlist?.items.map((item: any) => ({
+    // Transform cart items to cart format
+    const cartItems = user.cart?.items.map((item: any) => ({
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
@@ -66,26 +66,26 @@ export async function POST(request: NextRequest) {
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { wishlist: true }
+      include: { cart: true }
     })
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get or create wishlist
-    let wishlist = user.wishlist
-    if (!wishlist) {
-      wishlist = await prisma.wishlist.create({
+    // Get or create cart
+    let cart = user.cart
+    if (!cart) {
+      cart = await prisma.cart.create({
         data: { userId: user.id }
       })
     }
 
     // Check if item already exists
-    const existingItem = await prisma.wishlistItem.findUnique({
+    const existingItem = await prisma.cartItem.findUnique({
       where: {
-        wishlistId_productId: {
-          wishlistId: wishlist.id,
+        cartId_productId: {
+          cartId: cart.id,
           productId
         }
       }
@@ -93,24 +93,24 @@ export async function POST(request: NextRequest) {
 
     if (existingItem) {
       // Update quantity
-      await prisma.wishlistItem.update({
+      await prisma.cartItem.update({
         where: { id: existingItem.id },
         data: { quantity: existingItem.quantity + quantity }
       })
     } else {
       // Add new item
-      await prisma.wishlistItem.create({
+      await prisma.cartItem.create({
         data: {
-          wishlistId: wishlist.id,
+          cartId: cart.id,
           productId,
           quantity
         }
       })
     }
 
-    // Fetch updated wishlist
-    const updatedWishlist = await prisma.wishlist.findUnique({
-      where: { id: wishlist.id },
+    // Fetch updated cart
+    const updatedCart = await prisma.cart.findUnique({
+      where: { id: cart.id },
       include: {
         items: {
           include: {
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const cartItems = updatedWishlist?.items.map((item: any) => ({
+    const cartItems = updatedCart?.items.map((item: any) => ({
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
@@ -155,40 +155,40 @@ export async function PATCH(request: NextRequest) {
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { wishlist: true }
+      include: { cart: true }
     })
 
-    if (!user || !user.wishlist) {
-      return NextResponse.json({ error: 'Wishlist not found' }, { status: 404 })
+    if (!user || !user.cart) {
+      return NextResponse.json({ error: 'Cart not found' }, { status: 404 })
     }
 
-    const wishlistItem = await prisma.wishlistItem.findUnique({
+    const cartItem = await prisma.cartItem.findUnique({
       where: {
-        wishlistId_productId: {
-          wishlistId: user.wishlist.id,
+        cartId_productId: {
+          cartId: user.cart.id,
           productId
         }
       }
     })
 
-    if (!wishlistItem) {
+    if (!cartItem) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
     if (quantity <= 0) {
-      await prisma.wishlistItem.delete({
-        where: { id: wishlistItem.id }
+      await prisma.cartItem.delete({
+        where: { id: cartItem.id }
       })
     } else {
-      await prisma.wishlistItem.update({
-        where: { id: wishlistItem.id },
+      await prisma.cartItem.update({
+        where: { id: cartItem.id },
         data: { quantity }
       })
     }
 
-    // Fetch updated wishlist
-    const updatedWishlist = await prisma.wishlist.findUnique({
-      where: { id: user.wishlist.id },
+    // Fetch updated cart
+    const updatedCart = await prisma.cart.findUnique({
+      where: { id: user.cart.id },
       include: {
         items: {
           include: {
@@ -202,7 +202,7 @@ export async function PATCH(request: NextRequest) {
       }
     })
 
-    const cartItems = updatedWishlist?.items.map((item: any) => ({
+    const cartItems = updatedCart?.items.map((item: any) => ({
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
@@ -233,31 +233,31 @@ export async function DELETE(request: NextRequest) {
     
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { wishlist: true }
+      include: { cart: true }
     })
 
-    if (!user || !user.wishlist) {
-      return NextResponse.json({ error: 'Wishlist not found' }, { status: 404 })
+    if (!user || !user.cart) {
+      return NextResponse.json({ error: 'Cart not found' }, { status: 404 })
     }
 
     if (productId) {
       // Remove specific item
-      await prisma.wishlistItem.deleteMany({
+      await prisma.cartItem.deleteMany({
         where: {
-          wishlistId: user.wishlist.id,
+          cartId: user.cart.id,
           productId
         }
       })
     } else {
       // Clear entire cart
-      await prisma.wishlistItem.deleteMany({
-        where: { wishlistId: user.wishlist.id }
+      await prisma.cartItem.deleteMany({
+        where: { cartId: user.cart.id }
       })
     }
 
-    // Fetch updated wishlist
-    const updatedWishlist = await prisma.wishlist.findUnique({
-      where: { id: user.wishlist.id },
+    // Fetch updated cart
+    const updatedCart = await prisma.cart.findUnique({
+      where: { id: user.cart.id },
       include: {
         items: {
           include: {
@@ -271,7 +271,7 @@ export async function DELETE(request: NextRequest) {
       }
     })
 
-    const cartItems = updatedWishlist?.items.map((item: any) => ({
+    const cartItems = updatedCart?.items.map((item: any) => ({
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),

@@ -38,10 +38,9 @@ export async function GET(request: NextRequest) {
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
+      quantity: item.quantity,
       image: item.product.images[0]?.url || '',
-      slug: item.product.slug,
-      brand: item.product.brand,
-      discount: item.product.compareAtPrice ? Math.round((1 - Number(item.product.price) / Number(item.product.compareAtPrice)) * 100) : undefined
+      slug: item.product.slug
     })) || []
 
     return NextResponse.json({ items: wishlistItems })
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { productId } = body
+    const { productId, quantity = 1 } = body
 
     const { prisma } = await import('@/lib/prisma')
     
@@ -92,17 +91,21 @@ export async function POST(request: NextRequest) {
     })
 
     if (existingItem) {
-      return NextResponse.json({ message: 'Item already in wishlist' }, { status: 400 })
+      // Update quantity
+      await prisma.wishlistItem.update({
+        where: { id: existingItem.id },
+        data: { quantity: existingItem.quantity + quantity }
+      })
+    } else {
+      // Add new item
+      await prisma.wishlistItem.create({
+        data: {
+          wishlistId: wishlist.id,
+          productId,
+          quantity
+        }
+      })
     }
-
-    // Add new item
-    await prisma.wishlistItem.create({
-      data: {
-        wishlistId: wishlist.id,
-        productId,
-        quantity: 1
-      }
-    })
 
     // Fetch updated wishlist
     const updatedWishlist = await prisma.wishlist.findUnique({
@@ -124,10 +127,9 @@ export async function POST(request: NextRequest) {
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
+      quantity: item.quantity,
       image: item.product.images[0]?.url || '',
-      slug: item.product.slug,
-      brand: item.product.brand,
-      discount: item.product.compareAtPrice ? Math.round((1 - Number(item.product.price) / Number(item.product.compareAtPrice)) * 100) : undefined
+      slug: item.product.slug
     })) || []
 
     return NextResponse.json({ items: wishlistItems })
@@ -194,10 +196,9 @@ export async function DELETE(request: NextRequest) {
       id: item.product.id,
       name: item.product.name,
       price: Number(item.product.price),
+      quantity: item.quantity,
       image: item.product.images[0]?.url || '',
-      slug: item.product.slug,
-      brand: item.product.brand,
-      discount: item.product.compareAtPrice ? Math.round((1 - Number(item.product.price) / Number(item.product.compareAtPrice)) * 100) : undefined
+      slug: item.product.slug
     })) || []
 
     return NextResponse.json({ items: wishlistItems })
