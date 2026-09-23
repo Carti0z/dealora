@@ -30,15 +30,17 @@ export async function GET() {
     })
 
     const products = flashSaleProducts.map(product => {
-      const originalPrice = product.compareAtPrice || product.price * 1.5
-      const discount = Math.round(((originalPrice - product.price) / originalPrice) * 100)
+      const price = Number(product.price)
+      const compareAtPrice = product.compareAtPrice ? Number(product.compareAtPrice) : null
+      const originalPrice = compareAtPrice || price * 1.5
+      const discount = Math.round(((originalPrice - price) / originalPrice) * 100)
       
       return {
         id: product.id,
         name: product.name,
         image: product.images[0]?.url || '/placeholder.png',
         originalPrice,
-        price: product.price,
+        price,
         discount,
         stock: product.inventory?.quantity || 0,
         viewers: Math.floor(Math.random() * 20) + 5

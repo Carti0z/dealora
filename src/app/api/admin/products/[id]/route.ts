@@ -3,7 +3,7 @@ import { getAdminSession } from '@/lib/admin/auth'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await getAdminSession()
   if (!admin) {
@@ -24,19 +24,20 @@ export async function PUT(
     isFeatured,
     isNewArrival
   } = body
+  const { id } = await params
 
   try {
     const { prisma } = await import('@/lib/prisma')
 
     const product = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         slug,
         brand,
         description,
         price,
-        comparePrice,
+        compareAtPrice: comparePrice,
         categoryId,
         rating,
         isFeatured,
@@ -52,13 +53,13 @@ export async function PUT(
     console.error('Product update error:', error)
     // Return mock product when database is not connected
     return NextResponse.json({
-      id: params.id,
+      id,
       name: name || 'Updated Product',
       slug: slug || 'updated-product',
       brand: brand || 'Updated Brand',
       description: description || 'Updated product description',
       price: price || 99.99,
-      comparePrice: comparePrice || null,
+      compareAtPrice: comparePrice || null,
       categoryId: categoryId || null,
       inventory: { quantity: stock || 10 },
       rating: rating || 4.5,
@@ -72,17 +73,19 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await getAdminSession()
   if (!admin) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
+
   try {
     const { prisma } = await import('@/lib/prisma')
     await prisma.product.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ message: 'Product deleted successfully' })

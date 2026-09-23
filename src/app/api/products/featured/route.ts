@@ -28,15 +28,17 @@ export async function GET() {
     })
 
     const products = featuredProducts.map(product => {
-      const originalPrice = product.compareAtPrice
-      const discount = originalPrice ? Math.round(((originalPrice - product.price) / originalPrice) * 100) : undefined
+      const price = Number(product.price)
+      const compareAtPrice = product.compareAtPrice ? Number(product.compareAtPrice) : null
+      const originalPrice = compareAtPrice
+      const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : undefined
       
       return {
         id: product.id,
         name: product.name,
         brand: product.brand || 'Unknown',
         image: product.images[0]?.url || '/placeholder.png',
-        price: product.price,
+        price,
         originalPrice: originalPrice || undefined,
         discount,
         rating: product.rating,

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         brand,
         description,
         price,
-        comparePrice,
+        compareAtPrice: comparePrice,
         categoryId,
         inventory: {
           create: { quantity: stock || 0 }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       brand: brand || 'Mock Brand',
       description: description || 'Mock product description',
       price: price || 99.99,
-      comparePrice: comparePrice || null,
+      compareAtPrice: comparePrice || null,
       categoryId: categoryId || null,
       inventory: { quantity: stock || 10 },
       rating: rating || 4.5,

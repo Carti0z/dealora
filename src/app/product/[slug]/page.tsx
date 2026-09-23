@@ -17,6 +17,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('description');
 
   useEffect(() => {
     params.then(p => setSlug(p.slug));
@@ -282,7 +283,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
           {/* Product Details Tabs */}
           <div className="mt-12">
-            <Tabs defaultValue="description" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="specifications">Specifications</TabsTrigger>

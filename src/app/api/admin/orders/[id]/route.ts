@@ -3,7 +3,7 @@ import { getAdminSession } from '@/lib/admin/auth'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await getAdminSession()
   if (!admin) {
@@ -12,12 +12,13 @@ export async function PATCH(
 
   const body = await request.json()
   const { status } = body
+  const { id } = await params
 
   try {
     const { prisma } = await import('@/lib/prisma')
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id },
       data: { status }
     })
 
@@ -26,7 +27,7 @@ export async function PATCH(
     console.error('Order status update error:', error)
     // Return mock order when database is not connected
     return NextResponse.json({
-      id: params.id,
+      id,
       status: status,
       message: 'Order status updated in development mode (database not connected)'
     })

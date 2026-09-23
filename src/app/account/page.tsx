@@ -51,7 +51,7 @@ export default function AccountPage() {
       
       // Fetch user data
       const user = await prisma.user.findUnique({
-        where: { email: session?.user?.email },
+        where: { email: session?.user?.email || '' },
         include: {
           orders: {
             include: {
@@ -83,10 +83,10 @@ export default function AccountPage() {
 
       if (user) {
         setUserData(user);
-        setOrders(user.orders || []);
-        setAddresses(user.addresses || []);
-        setPaymentMethods(user.paymentMethods || []);
-        setNotifications(user.notifications || []);
+        setOrders((user as any).orders || []);
+        setAddresses((user as any).addresses || []);
+        setPaymentMethods((user as any).paymentMethods || []);
+        setNotifications((user as any).notifications || []);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -183,7 +183,7 @@ export default function AccountPage() {
               <CardContent className="space-y-6">
                 <div className="flex items-center space-x-4">
                   <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                    {userData?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || session.user?.name?.[0]?.toUpperCase() || 'U'}
+                    {userData?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || session.user?.name?.[0]?.toUpperCase() || 'U'}
                   </div>
                   <div>
                     <Button variant="outline" size="sm">Change Photo</Button>

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function AdminSettings() {
   const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('store')
   const [storeSettings, setStoreSettings] = useState({
     name: 'Dealora',
     email: 'contact@dealora.com',
@@ -50,7 +51,7 @@ export default function AdminSettings() {
         <p className="text-gray-600 mt-2">Configure your store settings</p>
       </div>
 
-      <Tabs defaultValue="store" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="store" className="flex items-center gap-2">
             <Store className="w-4 h-4" />

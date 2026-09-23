@@ -5,7 +5,7 @@ export async function GET() {
     const { prisma } = await import('@/lib/prisma')
     const newProducts = await prisma.product.findMany({
       where: {
-        isNew: true,
+        isNewArrival: true,
         inventory: {
           quantity: {
             gt: 0
@@ -13,9 +13,6 @@ export async function GET() {
         }
       },
       include: {
-        category: {
-          select: { name: true }
-        },
         inventory: {
           select: { quantity: true }
         },
@@ -35,9 +32,9 @@ export async function GET() {
       name: product.name,
       brand: product.brand || 'Unknown',
       image: product.images[0]?.url || '/placeholder.png',
-      price: product.price,
-      category: product.category?.name || 'General',
-      isNew: product.isNew,
+      price: Number(product.price),
+      category: 'General',
+      isNew: product.isNewArrival,
     }))
 
     return NextResponse.json(products)
@@ -52,7 +49,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
         price: 199.99,
         category: 'Electronics',
-        isNew: true,
       },
       {
         id: '2',
@@ -61,7 +57,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
         price: 149.99,
         category: 'Fashion',
-        isNew: true,
       },
       {
         id: '3',
@@ -70,7 +65,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=400&q=80',
         price: 129.99,
         category: 'Home',
-        isNew: true,
       },
       {
         id: '4',
@@ -79,7 +73,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?w=400&q=80',
         price: 399.99,
         category: 'Gaming',
-        isNew: true,
       },
       {
         id: '5',
@@ -88,7 +81,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?w=400&q=80',
         price: 49.99,
         category: 'Electronics',
-        isNew: true,
       },
       {
         id: '6',
@@ -97,7 +89,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1558002038-1091777c8d5e?w=400&q=80',
         price: 179.99,
         category: 'Electronics',
-        isNew: true,
       },
       {
         id: '7',
@@ -106,7 +97,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&q=80',
         price: 299.99,
         category: 'Electronics',
-        isNew: true,
       },
       {
         id: '8',
@@ -115,7 +105,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80',
         price: 249.99,
         category: 'Fashion',
-        isNew: true,
       },
       {
         id: '9',
@@ -124,7 +113,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80',
         price: 89.99,
         category: 'Fashion',
-        isNew: true,
       },
       {
         id: '10',
@@ -133,7 +121,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=80',
         price: 199.99,
         category: 'Fashion',
-        isNew: true,
       },
       {
         id: '11',
@@ -142,7 +129,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80',
         price: 159.99,
         category: 'Home',
-        isNew: true,
       },
       {
         id: '12',
@@ -151,7 +137,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
         price: 349.99,
         category: 'Home',
-        isNew: true,
       },
       {
         id: '13',
@@ -160,7 +145,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&q=80',
         price: 79.99,
         category: 'Home',
-        isNew: true,
       },
       {
         id: '14',
@@ -169,7 +153,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1587829741301-dc798b91add1?w=400&q=80',
         price: 129.99,
         category: 'Gaming',
-        isNew: true,
       },
       {
         id: '15',
@@ -178,7 +161,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&q=80',
         price: 79.99,
         category: 'Gaming',
-        isNew: true,
       },
       {
         id: '16',
@@ -187,7 +169,6 @@ export async function GET() {
         image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80',
         price: 99.99,
         category: 'Gaming',
-        isNew: true,
       },
     ]
     return NextResponse.json(defaultNewArrivals)
