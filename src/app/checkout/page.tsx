@@ -19,6 +19,9 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCart()
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPayment, setSelectedPayment] = useState('card');
+  const [selectedCrypto, setSelectedCrypto] = useState<'BTC' | 'ETH' | 'USDT'>('BTC');
+  const [cryptoPaymentDetails, setCryptoPaymentDetails] = useState<any>(null);
+  const [cryptoLoading, setCryptoLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -73,6 +76,7 @@ export default function CheckoutPage() {
             postalCode: formData.postalCode
           },
           paymentMethod: selectedPayment,
+          selectedCrypto: selectedPayment === 'crypto' ? selectedCrypto : undefined,
           total
         })
       })
@@ -94,9 +98,47 @@ export default function CheckoutPage() {
 
   const paymentMethods = [
     { id: 'card', name: 'Credit/Debit Card', icon: CreditCard, color: 'from-blue-500 to-blue-600' },
-    { id: 'bitcoin', name: 'Bitcoin', icon: Bitcoin, color: 'from-orange-500 to-orange-600' },
+    { id: 'crypto', name: 'Cryptocurrency', icon: Bitcoin, color: 'from-orange-500 to-orange-600' },
     { id: 'gift', name: 'Gift Card', icon: Gift, color: 'from-purple-500 to-purple-600' },
   ];
+
+  const cryptoCurrencies = [
+    { id: 'BTC', name: 'Bitcoin', icon: '₿', color: 'from-orange-500 to-orange-600' },
+    { id: 'ETH', name: 'Ethereum', icon: 'Ξ', color: 'from-blue-500 to-blue-600' },
+    { id: 'USDT', name: 'Tether', icon: '₮', color: 'from-green-500 to-green-600' },
+  ];
+
+  const handleCryptoPayment = async () => {
+    setCryptoLoading(true);
+    try {
+      const response = await fetch('/api/payments/crypto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currency: selectedCrypto,
+          amount: total
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setCryptoPaymentDetails(data.paymentDetails);
+      } else {
+        alert('Failed to generate crypto payment details');
+      }
+    } catch (error) {
+      alert('Error generating crypto payment details');
+    } finally {
+      setCryptoLoading(false);
+    }
+  };
+
+  // Generate crypto payment details when crypto is selected
+  useEffect(() => {
+    if (selectedPayment === 'crypto' && !cryptoPaymentDetails) {
+      handleCryptoPayment();
+    }
+  }, [selectedPayment]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -369,17 +411,90 @@ export default function CheckoutPage() {
                       </div>
                     )}
 
-                    {selectedPayment === 'bitcoin' && (
-                      <div className="p-4 bg-orange-50 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-2">
-                          Send Bitcoin to the following address:
-                        </p>
-                        <div className="bg-white p-3 rounded border border-gray-200 font-mono text-sm">
-                          bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
+                    {selectedPayment === 'crypto' && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2">
+                          {cryptoCurrencies.map((crypto) => (
+                            <div
+                              key={crypto.id}
+                              onClick={() => {
+                                setSelectedCrypto(crypto.id as 'BTC' | 'ETH' | 'USDT');
+                                setCryptoPaymentDetails(null);
+                                handleCryptoPayment();
+                              }}
+                              className={`p-3 rounded-lg border-2 cursor-pointer transition-colors text-center ${
+                                selectedCrypto === crypto.id
+                                  ? 'border-orange-500 bg-orange-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="text-2xl mb-1">{crypto.icon}</div>
+                              <div className="text-sm font-medium">{crypto.name}</div>
+                            </div>
+                          ))}
                         </div>
-                        <p className="text-sm text-gray-600 mt-2">
-                          Amount: <span className="font-bold">{(total / 50000).toFixed(8)} BTC</span>
-                        </p>
+
+                        {cryptoLoading ? (
+                          <div className="text-center py-8">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                            <p className="text-sm text-gray-600 mt-2">Generating payment details...</p>
+                          </div>
+                        ) : cryptoPaymentDetails ? (
+                          <div className="space-y-4">
+                            <div className="bg-white p-4 rounded-lg border border-gray-200">
+                              <h4 className="font-semibold mb-3">Send {cryptoPaymentDetails.currency} Payment</h4>
+                              
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-sm text-gray-600">Amount to Send:</label>
+                                  <div className="text-2xl font-bold text-orange-600">
+                                    {cryptoPaymentDetails.formattedAmount}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="text-sm text-gray-600">Wallet Address:</label>
+                                  <div className="bg-gray-50 p-3 rounded border border-gray-200 font-mono text-sm break-all">
+                                    {cryptoPaymentDetails.address}
+                                  </div>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText(cryptoPaymentDetails.address)}
+                                    className="text-sm text-orange-600 hover:text-orange-700 mt-1"
+                                  >
+                                    Copy Address
+                                  </button>
+                                </div>
+
+                                {cryptoPaymentDetails.qrCode && (
+                                  <div className="text-center">
+                                    <label className="text-sm text-gray-600">QR Code:</label>
+                                    <img 
+                                      src={cryptoPaymentDetails.qrCode} 
+                                      alt="QR Code" 
+                                      className="mx-auto mt-2 border rounded"
+                                    />
+                                  </div>
+                                )}
+
+                                <div className="text-xs text-gray-500">
+                                  <p>Network: {cryptoPaymentDetails.network}</p>
+                                  <p>⚠️ Send only {cryptoPaymentDetails.currency} to this address</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                              <p className="text-sm text-yellow-800">
+                                <strong>Important:</strong> Crypto payments require blockchain confirmations. 
+                                Your order will be processed once the payment is confirmed on the network.
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-gray-500">
+                            Select a cryptocurrency to see payment details
+                          </div>
+                        )}
                       </div>
                     )}
 

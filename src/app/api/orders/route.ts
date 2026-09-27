@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { items, shippingAddress, paymentMethod, total } = body
+    const { items, shippingAddress, paymentMethod, total, selectedCrypto } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Items required' }, { status: 400 })
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
         payments: {
           create: {
             amount: total || calculatedTotal,
-            method: paymentMethod,
+            method: paymentMethod === 'crypto' ? (selectedCrypto?.toUpperCase() as any) : (paymentMethod.toUpperCase() as any),
             status: 'PENDING'
           }
         }
