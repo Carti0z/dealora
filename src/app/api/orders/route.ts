@@ -194,8 +194,9 @@ export async function POST(request: NextRequest) {
         payments: {
           create: {
             amount: total || calculatedTotal,
-            method: paymentMethod === 'crypto' ? (selectedCrypto?.toUpperCase() as any) : (paymentMethod.toUpperCase() as any),
-            status: 'PENDING'
+            method: paymentMethod === 'crypto' ? 'CRYPTO' : paymentMethod.toUpperCase(),
+            status: paymentMethod === 'crypto' ? 'AWAITING_CONFIRMATION' : 'PENDING',
+            paymentData: paymentMethod === 'crypto' ? { currency: selectedCrypto } : null
           }
         }
       },

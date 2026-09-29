@@ -203,6 +203,7 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
   REFUNDED
+  FAILED
 }
 
 model OrderItem {
@@ -254,6 +255,7 @@ enum PaymentMethod {
   ETHEREUM
   USDT
   USDC
+  CRYPTO
 }
 
 enum PaymentStatus {
@@ -262,6 +264,7 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+  AWAITING_CONFIRMATION
 }
 
 model CryptoPayment {

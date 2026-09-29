@@ -22,6 +22,7 @@ export default function AccountPage() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -49,7 +50,7 @@ export default function AccountPage() {
     try {
       const { prisma } = await import('@/lib/prisma');
       
-      // Fetch user data
+      // Fetch user data with complete order history
       const user = await prisma.user.findUnique({
         where: { email: session?.user?.email || '' },
         include: {
@@ -63,10 +64,11 @@ export default function AccountPage() {
                     }
                   }
                 }
-              }
+              },
+              address: true,
+              payments: true
             },
-            orderBy: { createdAt: 'desc' },
-            take: 10
+            orderBy: { createdAt: 'desc' }
           },
           addresses: {
             orderBy: { isDefault: 'desc' }
@@ -77,6 +79,19 @@ export default function AccountPage() {
           notifications: {
             orderBy: { createdAt: 'desc' },
             take: 10
+          },
+          cart: {
+            include: {
+              items: {
+                include: {
+                  product: {
+                    include: {
+                      images: true
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       });
@@ -87,6 +102,7 @@ export default function AccountPage() {
         setAddresses((user as any).addresses || []);
         setPaymentMethods((user as any).paymentMethods || []);
         setNotifications((user as any).notifications || []);
+        setCartItems((user as any).cart?.items || []);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -246,15 +262,33 @@ export default function AccountPage() {
                             <p className="font-semibold text-gray-900">Order #{order.orderNumber}</p>
                             <p className="text-sm text-gray-500">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
-                            order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-700' :
-                            order.status === 'PROCESSING' ? 'bg-purple-100 text-purple-700' :
-                            order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {order.status}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                              order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-700' :
+                              order.status === 'PROCESSING' ? 'bg-purple-100 text-purple-700' :
+                              order.status === 'PAID' ? 'bg-teal-100 text-teal-700' :
+                              order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                              order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                              order.status === 'REFUNDED' ? 'bg-gray-100 text-gray-700' :
+                              order.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {order.status}
+                            </span>
+                            {order.payments && order.payments[0] && (
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                order.payments[0].status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                                order.payments[0].status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                                order.payments[0].status === 'PROCESSING' ? 'bg-blue-100 text-blue-700' :
+                                order.payments[0].status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                                order.payments[0].status === 'AWAITING_CONFIRMATION' ? 'bg-orange-100 text-orange-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {order.payments[0].method} - {order.payments[0].status}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -268,10 +302,42 @@ export default function AccountPage() {
                             <div>
                               <p className="text-sm font-medium">{order.items.length} items</p>
                               <p className="text-sm text-gray-500">${Number(order.total).toFixed(2)}</p>
+                              {order.estimatedDelivery && (
+                                <p className="text-xs text-gray-400">
+                                  Est. Delivery: {new Date(order.estimatedDelivery).toLocaleDateString()}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">View Details</Button>
+                          <div className="flex items-center space-x-2">
+                            <Link href={`/track-order?order=${order.orderNumber}`}>
+                              <Button variant="outline" size="sm">Track Order</Button>
+                            </Link>
+                          </div>
                         </div>
+                        {order.items.length > 1 && (
+                          <div className="mt-3 pt-3 border-t">
+                            <p className="text-xs text-gray-500 mb-2">Items:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {order.items.slice(0, 3).map((item: any) => (
+                                <div key={item.id} className="flex items-center space-x-2 bg-gray-50 px-2 py-1 rounded">
+                                  {item.product?.images[0] && (
+                                    <img 
+                                      src={item.product.images[0].url} 
+                                      alt={item.product.name}
+                                      className="w-6 h-6 object-cover rounded"
+                                    />
+                                  )}
+                                  <span className="text-xs">{item.product?.name}</span>
+                                  <span className="text-xs text-gray-500">x{item.quantity}</span>
+                                </div>
+                              ))}
+                              {order.items.length > 3 && (
+                                <span className="text-xs text-gray-500">+{order.items.length - 3} more</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -288,9 +354,9 @@ export default function AccountPage() {
                 <CardDescription>View items in your cart</CardDescription>
               </CardHeader>
               <CardContent>
-                {userData?.wishlist?.items && userData.wishlist.items.length > 0 ? (
+                {cartItems.length > 0 ? (
                   <div className="space-y-4">
-                    {userData.wishlist.items.map((item: any) => (
+                    {cartItems.map((item: any) => (
                       <div key={item.id} className="border rounded-lg p-4 flex items-center space-x-4">
                         {item.product?.images[0] && (
                           <img 
@@ -312,8 +378,13 @@ export default function AccountPage() {
                     <div className="pt-4 border-t">
                       <div className="flex justify-between text-lg font-semibold">
                         <span>Total:</span>
-                        <span>${userData.wishlist.items.reduce((sum: number, item: any) => sum + (Number(item.product?.price) * item.quantity), 0).toFixed(2)}</span>
+                        <span>${cartItems.reduce((sum: number, item: any) => sum + (Number(item.product?.price) * item.quantity), 0).toFixed(2)}</span>
                       </div>
+                      <Link href="/checkout">
+                        <Button className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                          Proceed to Checkout
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ) : (
