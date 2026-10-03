@@ -35,6 +35,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     loadCart();
   }, []);
 
+  // Sync localStorage when items change (for guest users)
+  useEffect(() => {
+    if (status !== 'authenticated' || !session?.user) {
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
+  }, [items, status, session]);
+
   // Load cart from database when user logs in
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
@@ -130,9 +137,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Failed to sync cart with database:', error);
       }
-    } else {
-      // Save to localStorage for guest users
-      localStorage.setItem('cart', JSON.stringify(items));
     }
   };
 
@@ -164,9 +168,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setItems((prevItems) =>
-      prevItems.map((item) => (item.id === id ? { ...item, quantity } : item))
-    );
+    setItems((prevItems) => {
+      const newItems = prevItems.map((item) => (item.id === id ? { ...item, quantity } : item));
+      // Save to localStorage for guest users
+      if (status !== 'authenticated' || !session?.user) {
+        localStorage.setItem('cart', JSON.stringify(newItems));
+      }
+      return newItems;
+    });
 
     if (status === 'authenticated' && session?.user) {
       try {
@@ -184,8 +193,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Failed to update quantity in database:', error);
       }
-    } else {
-      localStorage.setItem('cart', JSON.stringify(items));
     }
   };
 

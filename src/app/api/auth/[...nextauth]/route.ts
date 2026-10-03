@@ -2,21 +2,7 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 
-let prisma: any = null
-let prismaAdapter: any = null
-
-// Try to load Prisma, but don't fail if it's not available
-try {
-  const prismaModule = await import('@/lib/prisma')
-  prisma = prismaModule.prisma
-  const { PrismaAdapter } = await import('@auth/prisma-adapter')
-  prismaAdapter = PrismaAdapter(prisma)
-} catch (error) {
-  console.warn('Prisma not available, running in development mode without database')
-}
-
 const handler = NextAuth({
-  ...(prismaAdapter ? { adapter: prismaAdapter } : {}),
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -29,8 +15,39 @@ const handler = NextAuth({
           return null
         }
 
-        // Development mode: allow default admin login without database
-        if (!prisma) {
+        try {
+          const { prisma } = await import('@/lib/prisma')
+          
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email }
+          })
+
+          if (!user || !user.password) {
+            console.log('User not found or no password')
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          )
+
+          if (!isPasswordValid) {
+            console.log('Invalid password')
+            return null
+          }
+
+          console.log('Authentication successful for:', user.email)
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          }
+        } catch (error) {
+          console.error('Auth error:', error)
+          // Fallback to development mode for testing
+          console.log('Using development mode fallback')
           if (credentials.email === 'admin@dealora.com' && credentials.password === 'admin123') {
             return {
               id: 'dev-admin',
@@ -39,7 +56,6 @@ const handler = NextAuth({
               role: 'ADMIN'
             }
           }
-          // Also allow customer login in dev mode
           if (credentials.email === 'user@dealora.com' && credentials.password === 'user123') {
             return {
               id: 'dev-user',
@@ -49,31 +65,6 @@ const handler = NextAuth({
             }
           }
           return null
-        }
-
-        // Production mode with database
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        })
-
-        if (!user || !user.password) {
-          return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role
         }
       }
     })
@@ -105,7 +96,8 @@ const handler = NextAuth({
       }
       return session
     }
-  }
+  },
+  debug: process.env.NODE_ENV === 'development'
 })
 
 export { handler as GET, handler as POST }

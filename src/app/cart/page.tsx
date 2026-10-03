@@ -62,44 +62,60 @@ export default function CartPage() {
                     transition={{ delay: index * 0.05 }}
                   >
                     <Card className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="text-4xl">{item.image}</span>
+                      <div className="flex items-start space-x-4">
+                        <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {item.image && item.image.startsWith('http') ? (
+                            <img 
+                              src={item.image} 
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<span className="text-2xl">📦</span>';
+                              }}
+                            />
+                          ) : (
+                            <span className="text-2xl">📦</span>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
-                          <p className="text-gray-600">${item.price}</p>
+                          <h3 className="font-semibold text-gray-900 mb-1">{item.name}</h3>
+                          <p className="text-sm text-gray-500 mb-2">{item.slug}</p>
+                          <p className="text-lg font-bold text-gray-900">${item.price.toFixed(2)}</p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-col items-end space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                            <span className="w-12 text-center font-medium text-lg">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-lg text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                          </div>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => removeItem(item.id)}
+                            className="text-red-500 hover:text-red-600"
                           >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          >
-                            <Plus className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </Button>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(item.id)}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
                       </div>
                     </Card>
                   </motion.div>
