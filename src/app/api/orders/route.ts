@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
             amount: total || calculatedTotal,
             method: paymentMethod === 'crypto' ? 'CRYPTO' : paymentMethod.toUpperCase(),
             status: paymentMethod === 'crypto' ? 'AWAITING_CONFIRMATION' : 'PENDING',
-            paymentData: paymentMethod === 'crypto' ? { currency: selectedCrypto } : null
+            paymentData: paymentMethod === 'crypto' ? { currency: selectedCrypto } : undefined
           }
         }
       },
@@ -211,30 +211,43 @@ export async function POST(request: NextRequest) {
 
     // Send order confirmation email
     try {
-      await sendOrderConfirmationEmail({
-        orderNumber: order.orderNumber,
-        customerName: user.name || `${shippingAddress.firstName} ${shippingAddress.lastName}`,
-        customerEmail: shippingAddress.email || user.email,
-        items: order.items.map(item => ({
-          name: item.product.name,
-          quantity: item.quantity,
-          price: Number(item.price),
-          total: Number(item.total)
-        })),
-        subtotal: Number(order.subtotal),
-        shipping: Number(order.shipping),
-        tax: Number(order.tax),
-        total: Number(order.total),
-        shippingAddress: {
-          fullName: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
-          address: shippingAddress.address,
-          city: shippingAddress.city,
-          state: shippingAddress.state,
-          country: shippingAddress.country,
-          postalCode: shippingAddress.postalCode
-        },
-        estimatedDelivery: order.estimatedDelivery
+      const orderWithItems = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
       })
+
+      if (orderWithItems && orderWithItems.items) {
+        await sendOrderConfirmationEmail({
+          orderNumber: order.orderNumber,
+          customerName: user.name || `${shippingAddress.firstName} ${shippingAddress.lastName}`,
+          customerEmail: shippingAddress.email || user.email,
+          items: orderWithItems.items.map((item: any) => ({
+            name: item.product.name,
+            quantity: item.quantity,
+            price: Number(item.price),
+            total: Number(item.total)
+          })),
+          subtotal: Number(order.subtotal),
+          shipping: Number(order.shipping),
+          tax: Number(order.tax),
+          total: Number(order.total),
+          shippingAddress: {
+            fullName: `${shippingAddress.firstName} ${shippingAddress.lastName}`,
+            address: shippingAddress.address,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            country: shippingAddress.country,
+            postalCode: shippingAddress.postalCode
+          },
+          estimatedDelivery: order.estimatedDelivery || new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+        })
+      }
     } catch (emailError) {
       console.error('Failed to send order confirmation email:', emailError)
       // Don't fail the order if email fails

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Send welcome email
     try {
       await sendWelcomeEmail({
-        name: user.name,
+        name: user.name || 'Customer',
         email: user.email
       })
     } catch (emailError) {
