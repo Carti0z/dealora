@@ -198,11 +198,15 @@ export default function CheckoutPage() {
                     <div className="space-y-4">
                       {cartItems.map((item) => (
                         <div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
-                            <span className="text-3xl">{item.image}</span>
+                          <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            />
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
                             <p className="text-gray-600">${item.price}</p>
                           </div>
                           <div className="flex items-center space-x-2">

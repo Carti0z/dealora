@@ -28,7 +28,7 @@ export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const itemsPerSlide = 4;
+  const itemsPerSlide = 3;
   const totalSlides = categories.length > 0 ? Math.ceil(categories.length / itemsPerSlide) : 0;
 
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function Categories() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {currentCategories.map((category, index) => (
             <motion.div

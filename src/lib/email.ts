@@ -1,4 +1,7 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+// Initialize Resend client
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 interface OrderDetails {
   orderNumber: string;
@@ -25,25 +28,19 @@ interface OrderDetails {
   estimatedDelivery: Date;
 }
 
+interface WelcomeEmailDetails {
+  name: string;
+  email: string;
+}
+
 export async function sendOrderConfirmationEmail(orderDetails: OrderDetails) {
-  // Check if email is configured
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-    console.log('Email not configured. Skipping order confirmation email.');
-    return { success: false, message: 'Email not configured' };
+  // Check if Resend is configured
+  if (!resend) {
+    console.log('Resend not configured. Skipping order confirmation email.');
+    return { success: false, message: 'Resend not configured' };
   }
 
   try {
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-
     // Format date
     const deliveryDate = new Date(orderDetails.estimatedDelivery).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -139,49 +136,127 @@ export async function sendOrderConfirmationEmail(orderDetails: OrderDetails) {
       </html>
     `;
 
-    // Send email
-    const info = await transporter.sendMail({
-      from: `"Dealora" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+    // Send email using Resend
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'Dealora <noreply@yourdomain.com>',
       to: orderDetails.customerEmail,
       subject: `Order Confirmation - ${orderDetails.orderNumber}`,
       html: emailContent,
-      text: `
-        Order Confirmation - ${orderDetails.orderNumber}
-        
-        Dear ${orderDetails.customerName},
-        
-        We're pleased to confirm that your order has been successfully placed and is being processed.
-        
-        Order Number: ${orderDetails.orderNumber}
-        Estimated Delivery: ${deliveryDate}
-        
-        Items Ordered:
-        ${orderDetails.items.map(item => `- ${item.name} x ${item.quantity}: $${item.total.toFixed(2)}`).join('\n')}
-        
-        Subtotal: $${orderDetails.subtotal.toFixed(2)}
-        Shipping: $${orderDetails.shipping.toFixed(2)}
-        Tax: $${orderDetails.tax.toFixed(2)}
-        Total: $${orderDetails.total.toFixed(2)}
-        
-        Shipping Address:
-        ${orderDetails.shippingAddress.fullName}
-        ${orderDetails.shippingAddress.address}
-        ${orderDetails.shippingAddress.city}, ${orderDetails.shippingAddress.state} ${orderDetails.shippingAddress.postalCode}
-        ${orderDetails.shippingAddress.country}
-        
-        Track your order at: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/track-order?order=${orderDetails.orderNumber}
-        
-        If you have any questions about your order, please don't hesitate to contact our customer service team.
-        
-        Best regards,
-        The Dealora Team
-      `,
     });
 
-    console.log('Order confirmation email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Error sending order confirmation email:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('Order confirmation email sent:', data);
+    return { success: true, messageId: data?.id };
   } catch (error) {
     console.error('Error sending order confirmation email:', error);
+    return { success: false, error: 'Failed to send email' };
+  }
+}
+
+export async function sendWelcomeEmail(details: WelcomeEmailDetails) {
+  // Check if Resend is configured
+  if (!resend) {
+    console.log('Resend not configured. Skipping welcome email.');
+    return { success: false, message: 'Resend not configured' };
+  }
+
+  try {
+    const emailContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to Dealora</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #f97316 0%, #ef4444 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .welcome-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+          .button { display: inline-block; background: linear-gradient(135deg, #f97316 0%, #ef4444 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+          .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+          .features { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+          .feature { background: white; padding: 15px; border-radius: 8px; text-align: center; }
+          .feature-icon { font-size: 24px; margin-bottom: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to Dealora! 🎉</h1>
+            <p>Your shopping journey begins here</p>
+          </div>
+          <div class="content">
+            <p>Dear ${details.name},</p>
+            <p>We're thrilled to have you join the Dealora family! You've just unlocked access to thousands of amazing products at unbeatable prices.</p>
+            
+            <div class="welcome-box">
+              <h2>What Makes Dealora Special?</h2>
+              <div class="features">
+                <div class="feature">
+                  <div class="feature-icon">🔥</div>
+                  <h3>Flash Sales</h3>
+                  <p>Limited-time deals with huge discounts</p>
+                </div>
+                <div class="feature">
+                  <div class="feature-icon">🎁</div>
+                  <h3>Giveaways</h3>
+                  <p>Win amazing prizes regularly</p>
+                </div>
+                <div class="feature">
+                  <div class="feature-icon">🚚</div>
+                  <h3>Fast Shipping</h3>
+                  <p>Quick delivery to your doorstep</p>
+                </div>
+                <div class="feature">
+                  <div class="feature-icon">💳</div>
+                  <h3>Flexible Payment</h3>
+                  <p>Cards, crypto, and gift cards accepted</p>
+                </div>
+              </div>
+            </div>
+            
+            <p>Start exploring our collection today and discover deals you won't find anywhere else!</p>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/shop" class="button">Start Shopping</a>
+            </div>
+            
+            <p>If you have any questions, our support team is here to help you 24/7.</p>
+            
+            <p>Happy shopping!<br>The Dealora Team</p>
+          </div>
+          <div class="footer">
+            <p>This email was sent to ${details.email}. You received this email because you created an account on Dealora.</p>
+            <p>© ${new Date().getFullYear()} Dealora. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Send email using Resend
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'Dealora <noreply@yourdomain.com>',
+      to: details.email,
+      subject: 'Welcome to Dealora! 🎉',
+      html: emailContent,
+    });
+
+    if (error) {
+      console.error('Error sending welcome email:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('Welcome email sent:', data);
+    return { success: true, messageId: data?.id };
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
     return { success: false, error: 'Failed to send email' };
   }
 }

@@ -1,59 +1,47 @@
-# Email Configuration for Order Confirmations
+# Email Configuration for Dealora
 
-This application now sends order confirmation emails to customers upon successful checkout.
+This application sends emails for:
+- Order confirmations
+- Welcome emails for new users
+
+We use **Resend** for email delivery, which provides a modern API and excellent deliverability.
 
 ## Setup Instructions
 
-### 1. Choose an Email Service
+### 1. Get Resend API Key
 
-You can use any SMTP-compatible email service. Popular options include:
-
-- **Gmail** (Free, requires App Password)
-- **SendGrid** (Free tier available)
-- **Mailgun** (Free tier available)
-- **Amazon SES** (Pay-as-you-go)
-- **Outlook/Office 365**
+1. Create an account at [resend.com](https://resend.com)
+2. Go to API Keys section
+3. Create a new API key
+4. Copy the API key (starts with `re_`)
 
 ### 2. Configure Environment Variables
 
 Add the following to your `.env` file:
 
 ```env
-# Email Configuration
-SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
-SMTP_USER="your-email@gmail.com"
-SMTP_PASSWORD="your-app-password"
-SMTP_FROM="noreply@yourdomain.com"
+# Resend Email Configuration
+RESEND_API_KEY="re_your_api_key_here"
+RESEND_FROM_EMAIL="Dealora <noreply@yourdomain.com>"
 ```
 
-### 3. Service-Specific Setup
+**Important:** Make sure to verify your sender domain in Resend:
+- Go to Domains in Resend dashboard
+- Add your domain
+- Add the DNS records provided by Resend
+- Wait for verification
 
-#### Gmail Setup
-1. Go to [Google Account Settings](https://myaccount.google.com/security)
-2. Enable 2-Factor Authentication
-3. Generate an App Password:
-   - Go to Security → 2-Step Verification → App passwords
-   - Create a new app password for "Dealora"
-   - Use this 16-character password in `SMTP_PASSWORD`
+### 3. Email Templates
 
-#### SendGrid Setup
-1. Create account at [sendgrid.com](https://sendgrid.com)
-2. Verify your sender domain
-3. Get your API credentials from Settings → API Keys
-4. Use these credentials:
-   ```env
-   SMTP_HOST="smtp.sendgrid.net"
-   SMTP_PORT="587"
-   SMTP_USER="apikey"
-   SMTP_PASSWORD="your-sendgrid-api-key"
-   ```
+#### Welcome Email
+- Sent automatically when a new user signs up
+- Includes welcome message and features overview
+- Encourages users to start shopping
 
-#### Mailgun Setup
-1. Create account at [mailgun.com](https://mailgun.com)
-2. Verify your domain
-3. Get SMTP credentials from Domains → SMTP
-4. Use credentials provided by Mailgun
+#### Order Confirmation Email
+- Sent after successful checkout
+- Includes order details, items, and shipping address
+- Provides order tracking link
 
 ### 4. Test Email Configuration
 
